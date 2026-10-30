@@ -166,3 +166,20 @@ func TestPublicWithFirewallUnknownFails(t *testing.T) {
 		t.Fatalf("got %+v", r)
 	}
 }
+
+func TestPhoneSeenProvesReachability(t *testing.T) {
+	r := doctorWith(fakePlatform{profile: "Public", allowed: false}, "192.168.1.5").Run(context.Background(), Options{PhoneSeen: true})
+	if !r.OK || check(r, "firewall").Status != OK || check(r, "profile").Status != Warn {
+		t.Fatalf("got %+v", r)
+	}
+	if check(r, "firewall").Detail != "phone-seen" {
+		t.Fatalf("detail %q", check(r, "firewall").Detail)
+	}
+}
+
+func TestPhoneSeenWithFirewallUnknownIsOK(t *testing.T) {
+	r := doctorWith(fakePlatform{profile: "Public", fwErr: errors.New("access denied")}, "192.168.1.5").Run(context.Background(), Options{PhoneSeen: true})
+	if !r.OK || check(r, "firewall").Status != OK {
+		t.Fatalf("got %+v", r)
+	}
+}

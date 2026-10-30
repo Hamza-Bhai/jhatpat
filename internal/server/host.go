@@ -223,7 +223,7 @@ func (s *Server) hostRoutes() {
 			writeErr(w, http.StatusNotImplemented, "not available")
 			return
 		}
-		writeJSON(w, http.StatusOK, s.cfg.Doctor.Run(r.Context(), netdoctor.Options{PhoneTrouble: r.URL.Query().Get("trouble") == "1"}))
+		writeJSON(w, http.StatusOK, s.cfg.Doctor.Run(r.Context(), netdoctor.Options{PhoneTrouble: r.URL.Query().Get("trouble") == "1", PhoneSeen: s.PhoneSeen()}))
 	}))
 	m.HandleFunc("POST /api/host/doctor/firewall", s.host(func(w http.ResponseWriter, r *http.Request) {
 		if s.cfg.Doctor == nil {

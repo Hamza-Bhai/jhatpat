@@ -120,7 +120,7 @@ func watchNetwork(ctx context.Context, d *netdoctor.Doctor, srv *server.Server, 
 	tick := time.NewTicker(30 * time.Second)
 	defer tick.Stop()
 	for {
-		r := d.Run(ctx, netdoctor.Options{})
+		r := d.Run(ctx, netdoctor.Options{PhoneSeen: srv.PhoneSeen()})
 		if r.IP != "" && r.IP != ip.Load().(string) {
 			ip.Store(r.IP)
 			srv.Hub().Send("host", events.Event{Type: "pin", Data: map[string]string{"ip": r.IP}})

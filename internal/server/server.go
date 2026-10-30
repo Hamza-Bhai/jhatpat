@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"jhatpat/internal/auth"
@@ -64,7 +65,8 @@ type Server struct {
 	uploads    *transfer.Uploads // phone → laptop, saved in SaveDir
 	outbox     *transfer.Uploads // host drag-and-drop staging
 	joinURL    func() string
-	uploadMeta sync.Map // upload id → uploadMeta
+	uploadMeta sync.Map    // upload id → uploadMeta
+	phoneSeen  atomic.Bool // a non-loopback device joined this run
 }
 
 // New builds a Server from cfg.
@@ -115,6 +117,9 @@ func (s *Server) SetJoinURL(f func() string) { s.joinURL = f }
 
 // Hub exposes the event hub (Network Doctor publishes through it).
 func (s *Server) Hub() *events.Hub { return s.hub }
+
+// PhoneSeen reports whether a device on the network has reached JhatPat this run.
+func (s *Server) PhoneSeen() bool { return s.phoneSeen.Load() }
 
 // Shutdown removes unfinished partial uploads.
 func (s *Server) Shutdown() {

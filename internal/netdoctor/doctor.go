@@ -45,6 +45,9 @@ type Platform interface {
 type Options struct {
 	// PhoneTrouble is set when the user says their phone cannot open the link.
 	PhoneTrouble bool
+	// PhoneSeen is set once a device on the network has reached JhatPat this
+	// run: hard proof the profile and firewall let phones in.
+	PhoneSeen bool
 }
 
 // Doctor runs network checks. Adapters and Reach are injectable for tests.
@@ -104,7 +107,7 @@ func (d *Doctor) Run(ctx context.Context, opt Options) Report {
 		// letting JhatPat in; with one, it is just worth knowing.
 		if prof, err := d.Platform.NetworkProfile(chosen.Name); err != nil {
 			add("profile", Warn, "")
-		} else if prof == "Public" && fwErr == nil && fwAllowed {
+		} else if prof == "Public" && (opt.PhoneSeen || (fwErr == nil && fwAllowed)) {
 			add("profile", Warn, prof)
 		} else if prof == "Public" {
 			add("profile", Fail, prof)
@@ -113,6 +116,8 @@ func (d *Doctor) Run(ctx context.Context, opt Options) Report {
 		}
 
 		switch {
+		case opt.PhoneSeen:
+			add("firewall", OK, "phone-seen")
 		case fwErr != nil:
 			add("firewall", Warn, "")
 		case !fwAllowed:

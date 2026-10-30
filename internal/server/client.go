@@ -50,6 +50,9 @@ func (s *Server) newPending(w http.ResponseWriter, r *http.Request, pid, name st
 			name = guessName(r.UserAgent())
 		}
 	}
+	if !isLoopback(r) {
+		s.phoneSeen.Store(true)
+	}
 	d := s.devices.Request(name, pid)
 	setCookie(w, cookieDev, d.Token, 0)
 	s.hub.Send(items.Host, events.Event{Type: "device-request", Data: map[string]string{"id": d.ID, "name": d.Name}})

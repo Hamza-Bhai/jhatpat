@@ -40,16 +40,24 @@ func (systemPlatform) NetworkProfile(adapter string) (string, error) {
 // port rule or our exe, and no enabled inbound block rule targets the exe
 // (Windows creates block rules when the user dismisses its prompt).
 func (systemPlatform) FirewallAllows(exePath string, port int) (bool, error) {
+	// Reading rules needs admin on many PCs; "Access is denied" must become
+	// an error ("couldn't check"), never a silent "no rules found".
 	script := fmt.Sprintf(`
-$in = { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' }
-$byName = @(Get-NetFirewallRule -DisplayName %s -ErrorAction SilentlyContinue | Where-Object $in | Where-Object { $_.Action -eq 'Allow' }).Count
-$app = @(Get-NetFirewallApplicationFilter -Program %s -ErrorAction SilentlyContinue | Get-NetFirewallRule | Where-Object $in)
-$allow = @($app | Where-Object { $_.Action -eq 'Allow' }).Count
-$block = @($app | Where-Object { $_.Action -eq 'Block' }).Count
-"$($byName + $allow) $block"`, psQuote(ruleName), psQuote(exePath))
+try {
+  $in = { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' }
+  $all = @(Get-NetFirewallRule -ErrorAction Stop)
+  $byName = @($all | Where-Object { $_.DisplayName -eq %s } | Where-Object $in | Where-Object { $_.Action -eq 'Allow' }).Count
+  $app = @(Get-NetFirewallApplicationFilter -Program %s -ErrorAction SilentlyContinue | Get-NetFirewallRule | Where-Object $in)
+  $allow = @($app | Where-Object { $_.Action -eq 'Allow' }).Count
+  $block = @($app | Where-Object { $_.Action -eq 'Block' }).Count
+  "$($byName + $allow) $block"
+} catch { "ERR $($_.Exception.Message)" }`, psQuote(ruleName), psQuote(exePath))
 	out, err := powershell(20*time.Second, script)
 	if err != nil {
 		return false, err
+	}
+	if strings.HasPrefix(out, "ERR") {
+		return false, fmt.Errorf("cannot read firewall rules: %s", strings.TrimSpace(strings.TrimPrefix(out, "ERR")))
 	}
 	f := strings.Fields(out)
 	if len(f) != 2 {
