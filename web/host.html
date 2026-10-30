@@ -1,1 +1,113 @@
-<!doctype html><title>JhatPat</title><p>host
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JhatPat ⚡</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/static/css/sunnypop.css">
+<script src="/static/js/common.js"></script>
+<script src="/static/js/i18n.js"></script>
+<script>JP.theme.init();</script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">⚡ JhatPat <small data-i18n="tagline"></small></div>
+    <div class="row">
+      <button class="pill" id="doctorPill">🩺 …</button>
+      <button class="btn small" id="langBtn"></button>
+      <button class="btn small iconbtn" data-theme-btn title="Light / Dark"></button>
+    </div>
+  </header>
+
+  <div id="approvals" class="stack" style="margin-bottom:18px"></div>
+
+  <div class="grid">
+    <section class="card sun">
+      <h2 data-i18n="connect_title"></h2>
+      <p class="muted" data-i18n="connect_help"></p>
+      <div class="row" style="align-items:flex-start">
+        <img class="qr" id="qr" alt="QR code">
+        <div class="stack" style="flex:1;min-width:150px">
+          <div class="muted">PIN</div>
+          <div class="pin" id="pin">····</div>
+          <div class="muted"><span data-i18n="address"></span>: <b id="joinLink">—</b></div>
+          <button class="btn small" id="newPin" data-i18n="new_pin"></button>
+          <button class="btn small" id="phoneTrouble" data-i18n="phone_trouble"></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="send_title"></h2>
+      <div class="stack">
+        <div>
+          <label class="lbl" for="target" data-i18n="send_to"></label>
+          <select id="target"></select>
+        </div>
+        <div class="drop" id="drop" tabindex="0" role="button">
+          <span class="emoji">🎁</span>
+          <b data-i18n="drop_here"></b>
+          <div class="muted" data-i18n="drop_sub"></div>
+        </div>
+        <input type="file" id="fileInput" multiple class="hidden">
+        <button class="btn yellow" id="pickLaptop" style="width:100%" data-i18n="pick_laptop"></button>
+        <textarea id="text" data-i18n-ph="text_ph"></textarea>
+        <button class="btn primary" id="sendText" data-i18n="send"></button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="devices_title"></h2>
+      <ul class="list" id="devices"></ul>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="groups_title"></h2>
+      <div class="row" style="flex-wrap:nowrap">
+        <input type="text" id="groupName" data-i18n-ph="new_group_ph" maxlength="40">
+        <button class="btn primary" id="createGroup" data-i18n="create"></button>
+      </div>
+      <ul class="list" id="groups" style="margin-top:8px"></ul>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:18px">
+    <div class="row spread">
+      <h2 data-i18n="history_title"></h2>
+      <button class="btn small" id="openFolder" data-i18n="open_folder"></button>
+    </div>
+    <ul class="list" id="uploads"></ul>
+    <ul class="list" id="history"></ul>
+  </section>
+</div>
+
+<div class="modal hidden" id="doctorModal">
+  <div class="card">
+    <h2 data-i18n="doctor_title"></h2>
+    <div id="checks"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn red hidden" id="fixFirewall" data-i18n="fix_firewall"></button>
+      <button class="btn" id="rerun" data-i18n="doctor_rerun"></button>
+      <button class="btn primary" data-close data-i18n="close"></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="browseModal">
+  <div class="card">
+    <h2 data-i18n="browse_title"></h2>
+    <div class="row" id="roots" style="margin-bottom:8px"></div>
+    <div class="row spread"><b id="browseDir" style="word-break:break-all"></b><button class="btn small" id="browseUp" data-i18n="up"></button></div>
+    <ul class="list browse-list" id="browseList"></ul>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="sendSelected" data-i18n="send_selected"></button>
+      <button class="btn" data-close data-i18n="close"></button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/host.js"></script>
+</body>
+</html>

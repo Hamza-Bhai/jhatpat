@@ -197,6 +197,7 @@ func (s *Server) hostRoutes() {
 		}
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	}))
+	m.HandleFunc("GET /api/host/browse", s.host(s.handleBrowse))
 	m.HandleFunc("GET /api/host/qr.png", s.host(func(w http.ResponseWriter, r *http.Request) {
 		u := s.joinURL()
 		if u == "" {
