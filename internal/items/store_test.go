@@ -53,3 +53,14 @@ func TestVisibleNewestFirstAndIDsUnique(t *testing.T) {
 		t.Fatalf("order/ids wrong: %v", v)
 	}
 }
+
+func TestGetReturnsAnyItem(t *testing.T) {
+	s := NewStore()
+	it := s.Add(Item{Kind: Text, Text: "x", From: "A", To: []string{"B"}})
+	if got, ok := s.Get(it.ID); !ok || got.Text != "x" {
+		t.Fatal("not found")
+	}
+	if _, ok := s.Get("nope"); ok {
+		t.Fatal("bogus found")
+	}
+}

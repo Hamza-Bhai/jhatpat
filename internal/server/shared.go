@@ -130,13 +130,31 @@ func contentDisposition(name string) string {
 	return fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`, ascii, url.PathEscape(name))
 }
 
-// serveItem streams an item to viewer, or 404 if they may not see it.
-func (s *Server) serveItem(w http.ResponseWriter, r *http.Request, viewer string) {
+// previewTypes are the only file types shown inline in the browser. Anything
+// else (HTML, SVG, scripts…) is always downloaded so a shared file can never
+// run code on a JhatPat page.
+var previewTypes = map[string]string{
+	".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
+	".webp": "image/webp", ".bmp": "image/bmp", ".avif": "image/avif",
+	".mp4": "video/mp4", ".m4v": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime", ".ogv": "video/ogg",
+	".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".wav": "audio/wav", ".ogg": "audio/ogg", ".oga": "audio/ogg", ".flac": "audio/flac", ".opus": "audio/ogg",
+	".pdf": "application/pdf",
+	".txt": "text/plain; charset=utf-8",
+}
+
+// serveVisible serves an item the viewer may see, or 404.
+func (s *Server) serveVisible(w http.ResponseWriter, r *http.Request, viewer string, inline bool) {
 	it, ok := s.items.GetFor(viewer, r.PathValue("id"))
 	if !ok {
 		http.NotFound(w, r)
 		return
 	}
+	s.serveItem(w, r, it, inline)
+}
+
+// serveItem streams an item. inline=true previews safe types in the browser.
+func (s *Server) serveItem(w http.ResponseWriter, r *http.Request, it items.Item, inline bool) {
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	switch it.Kind {
 	case items.Text:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -157,7 +175,21 @@ func (s *Server) serveItem(w http.ResponseWriter, r *http.Request, viewer string
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Disposition", contentDisposition(it.Name))
+		ctype, safe := previewTypes[strings.ToLower(filepath.Ext(it.Name))]
+		if inline && safe {
+			w.Header().Set("Content-Type", ctype)
+			w.Header().Set("Content-Disposition", strings.Replace(contentDisposition(it.Name), "attachment", "inline", 1))
+			if ctype != "application/pdf" { // Chrome refuses to render sandboxed PDFs
+				w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'")
+			}
+			w.Header().Set("Cache-Control", "private, max-age=3600")
+		} else {
+			if !safe {
+				ctype = "application/octet-stream"
+			}
+			w.Header().Set("Content-Type", ctype)
+			w.Header().Set("Content-Disposition", contentDisposition(it.Name))
+		}
 		http.ServeContent(w, r, it.Name, info.ModTime(), f)
 	}
 }

@@ -94,6 +94,14 @@ func (s *Store) GetFor(viewer, id string) (Item, bool) {
 	return it, true
 }
 
+// Get returns any item (host view).
+func (s *Store) Get(id string) (Item, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	it, ok := s.items[id]
+	return it, ok
+}
+
 // Remove deletes an item.
 func (s *Store) Remove(id string) {
 	s.mu.Lock()

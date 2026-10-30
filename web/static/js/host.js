@@ -7,6 +7,7 @@
   let browsePath = "";
   const selected = new Set();
   const scroller = JP.stickyScroll($("#chat"));
+  JP.viewSource = () => ({ items: state.items.filter(inConversation).reverse(), base: "/api/host/items/" });
 
   // ---------- helpers ----------
   function target() {
@@ -104,7 +105,7 @@
       $("#feed").innerHTML = list
         .map((it) => {
           const mine = it.from === "host";
-          return JP.bubble(it, { mine, who: mine ? "" : it.fromName, download: "", removable: true });
+          return JP.bubble(it, { mine, who: mine ? "" : it.fromName, base: "/api/host/items/", removable: true });
         })
         .join("");
       $("#empty").classList.toggle("hidden", list.length > 0 || $("#pending").children.length > 0);

@@ -193,25 +193,128 @@
 // ---- chat bubbles (shared by phone and laptop pages) ----
 (function () {
   const JP = window.JP;
-  // opts: { mine, who, download (url or ""), removable }
+  // What a file can be previewed as. Mirrors previewTypes on the server.
+  JP.previewKind = function (name, kind) {
+    if (kind !== "file") return "";
+    const ext = (name.split(".").pop() || "").toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "avif"].includes(ext)) return "image";
+    if (["mp4", "m4v", "webm", "mov", "ogv"].includes(ext)) return "video";
+    if (["mp3", "m4a", "aac", "wav", "ogg", "oga", "flac", "opus"].includes(ext)) return "audio";
+    if (ext === "pdf") return "pdf";
+    if (ext === "txt") return "txt";
+    return "";
+  };
+
+  // opts: { mine, who, base ("/api/dev/items/" or "/api/host/items/"), removable }
   JP.bubble = function (it, opts) {
     const t = JP.t;
     const time = new Date(it.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const who = opts.who ? `<div class="who">${JP.esc(opts.who)}</div>` : "";
+    const view = `${opts.base}${it.id}/view`;
+    const dl = `${opts.base}${it.id}/download`;
+    const pk = JP.previewKind(it.name, it.kind);
+    const size = it.size ? JP.fmtBytes(it.size) : "";
     let body;
     if (it.kind === "text") {
       body = `<div class="txt">${JP.linkify(it.text)}</div>
         <div class="acts"><button class="btn small" data-copy="${it.id}">${t("copy")}</button></div>`;
     } else {
       const name = it.name + (it.kind === "folder" ? ".zip" : "");
-      body = `<div class="file"><span class="ico">${JP.fileIcon(it.name, it.kind)}</span>
-        <div><b>${JP.esc(name)}</b><span class="muted" style="color:inherit;opacity:.8">${it.size ? JP.fmtBytes(it.size) : ""}</span></div></div>
-        ${opts.download ? `<div class="acts"><a class="btn small primary" href="${opts.download}" download>${t("download")}</a></div>` : ""}`;
+      let media = "";
+      if (pk === "image") {
+        media = `<button class="thumbbtn" data-view="${it.id}" aria-label="${JP.esc(name)}"><img class="thumb" src="${view}" loading="lazy" alt=""></button>`;
+      } else if (pk === "video") {
+        media = `<button class="thumbbtn" data-view="${it.id}" aria-label="${JP.esc(name)}"><video class="thumb" src="${view}#t=0.1" preload="metadata" muted playsinline></video><span class="play">▶</span></button>`;
+      } else if (pk === "audio") {
+        media = `<audio class="audio" controls preload="none" src="${view}"></audio>`;
+      }
+      const openable = pk === "pdf" || pk === "txt";
+      const row = `<div class="file ${openable ? "clickable" : ""}" ${openable ? `data-view="${it.id}" role="button" tabindex="0"` : ""}>
+        <span class="ico">${JP.fileIcon(it.name, it.kind)}</span>
+        <div><b>${JP.esc(name)}</b><span style="opacity:.8">${size}</span></div></div>`;
+      body = media ? `${media}<div class="cap">${JP.esc(name)} <span style="opacity:.8">${size}</span></div>` : row;
+      body += `<div class="acts"><a class="btn small primary" href="${dl}" download>${t("download")}</a></div>`;
     }
     const x = opts.removable ? `<button class="x" title="${t("remove")}" data-remove="${it.id}">✕</button>` : "";
-    return `<div class="msg ${opts.mine ? "mine" : ""}" data-id="${it.id}">${who}${body}
+    return `<div class="msg ${opts.mine ? "mine" : ""} ${pk === "image" || pk === "video" ? "media" : ""}" data-id="${it.id}">${who}${body}
       <div class="meta">${opts.mine ? JP.esc("→ " + it.toNames.join(", ")) + " · " : ""}${time}${opts.mine ? " ✓" : ""}${x}</div></div>`;
   };
+
+  // ---- full-screen viewer ----
+  // Pages set JP.viewSource = () => ({ items, base }) with items oldest first.
+  let viewerEl = null;
+  JP.openViewer = function (id) {
+    if (!JP.viewSource) return;
+    const { items, base } = JP.viewSource();
+    const it = items.find((x) => x.id === id);
+    if (!it) return;
+    const pk = JP.previewKind(it.name, it.kind);
+    if (pk === "pdf") return window.open(`${base}${it.id}/view`, "_blank", "noopener");
+    const gallery = items.filter((x) => ["image", "video"].includes(JP.previewKind(x.name, x.kind)));
+    let idx = Math.max(0, gallery.findIndex((x) => x.id === id));
+    if (!viewerEl) {
+      viewerEl = document.createElement("div");
+      viewerEl.className = "viewer";
+      viewerEl.innerHTML = `<div class="vbar"><b class="vname"></b><span class="row">
+          <a class="btn small primary vdl" download>${JP.t("download")}</a>
+          <button class="btn small vclose" aria-label="Close">✕</button></span></div>
+        <div class="vbody"></div>
+        <button class="vnav vprev" aria-label="Previous">‹</button><button class="vnav vnext" aria-label="Next">›</button>`;
+      document.body.appendChild(viewerEl);
+      viewerEl.querySelector(".vclose").onclick = JP.closeViewer;
+      viewerEl.addEventListener("click", (e) => { if (e.target === viewerEl || e.target.classList.contains("vbody")) JP.closeViewer(); });
+      document.addEventListener("keydown", (e) => {
+        if (!viewerEl || viewerEl.classList.contains("hidden")) return;
+        if (e.key === "Escape") JP.closeViewer();
+        if (e.key === "ArrowLeft") viewerEl.querySelector(".vprev").click();
+        if (e.key === "ArrowRight") viewerEl.querySelector(".vnext").click();
+      });
+      let x0 = null;
+      viewerEl.addEventListener("touchstart", (e) => (x0 = e.touches[0].clientX), { passive: true });
+      viewerEl.addEventListener("touchend", (e) => {
+        if (x0 === null) return;
+        const dx = e.changedTouches[0].clientX - x0;
+        if (Math.abs(dx) > 60) viewerEl.querySelector(dx > 0 ? ".vprev" : ".vnext").click();
+        x0 = null;
+      });
+    }
+    const show = (single) => {
+      const cur = single || gallery[idx];
+      const k = JP.previewKind(cur.name, cur.kind);
+      const src = `${base}${cur.id}/view`;
+      viewerEl.querySelector(".vname").textContent = cur.name;
+      viewerEl.querySelector(".vdl").href = `${base}${cur.id}/download`;
+      viewerEl.querySelector(".vbody").innerHTML =
+        k === "image" ? `<img src="${src}" alt="">`
+        : k === "video" ? `<video src="${src}" controls autoplay playsinline></video>`
+        : k === "txt" ? `<iframe src="${src}" title="text"></iframe>`
+        : `<div class="vnone">${JP.fileIcon(cur.name, cur.kind)}<p>${JP.esc(cur.name)}</p></div>`;
+      const nav = !single && gallery.length > 1;
+      viewerEl.querySelector(".vprev").classList.toggle("hidden", !nav);
+      viewerEl.querySelector(".vnext").classList.toggle("hidden", !nav);
+    };
+    viewerEl.querySelector(".vprev").onclick = (e) => { e.stopPropagation(); idx = (idx - 1 + gallery.length) % gallery.length; show(); };
+    viewerEl.querySelector(".vnext").onclick = (e) => { e.stopPropagation(); idx = (idx + 1) % gallery.length; show(); };
+    show(pk === "image" || pk === "video" ? null : it);
+    viewerEl.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  };
+  JP.closeViewer = function () {
+    if (!viewerEl) return;
+    viewerEl.classList.add("hidden");
+    viewerEl.querySelector(".vbody").innerHTML = ""; // stops video playback
+    document.body.style.overflow = "";
+  };
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-view]");
+    if (el) { e.preventDefault(); JP.openViewer(el.dataset.view); }
+  });
+  document.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("[data-view][role=button]")) {
+      e.preventDefault();
+      JP.openViewer(e.target.dataset.view);
+    }
+  });
 
   // A temporary bubble for a file being uploaded; returns {el, progress(sent,total,speed), done(), fail(msg), pause(onResume)}.
   JP.pendingBubble = function (container, file, label) {
@@ -247,13 +350,19 @@
   };
 
   // Keeps a scroll box pinned to the bottom when the user is already there.
+  // Photos and videos that finish loading later keep it pinned too.
   JP.stickyScroll = function (box) {
     const nearBottom = () => box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    let pinned = true;
+    box.addEventListener("scroll", () => (pinned = nearBottom()), { passive: true });
+    const keep = () => { if (pinned) box.scrollTop = box.scrollHeight; };
+    box.addEventListener("load", keep, true); // images
+    box.addEventListener("loadedmetadata", keep, true); // videos
     return {
       update(fn, force) {
         const stick = force || nearBottom();
         fn();
-        if (stick) box.scrollTop = box.scrollHeight;
+        if (stick) { box.scrollTop = box.scrollHeight; pinned = true; }
       },
     };
   };

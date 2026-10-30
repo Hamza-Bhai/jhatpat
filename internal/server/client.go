@@ -137,7 +137,10 @@ func (s *Server) deviceRoutes() {
 		writeJSON(w, http.StatusOK, s.views(s.items.Visible(d.ID)))
 	}))
 	m.HandleFunc("GET /api/dev/items/{id}/download", s.dev(func(w http.ResponseWriter, r *http.Request, d *auth.Device) {
-		s.serveItem(w, r, d.ID)
+		s.serveVisible(w, r, d.ID, false)
+	}))
+	m.HandleFunc("GET /api/dev/items/{id}/view", s.dev(func(w http.ResponseWriter, r *http.Request, d *auth.Device) {
+		s.serveVisible(w, r, d.ID, true)
 	}))
 	m.HandleFunc("GET /api/dev/targets", s.dev(func(w http.ResponseWriter, r *http.Request, d *auth.Device) {
 		devs := []map[string]string{}

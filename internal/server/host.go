@@ -168,14 +168,7 @@ func (s *Server) hostRoutes() {
 
 	m.HandleFunc("POST /api/host/send", s.host(s.handleHostSend))
 	m.HandleFunc("DELETE /api/host/items/{id}", s.host(func(w http.ResponseWriter, r *http.Request) {
-		it, ok := s.items.GetFor(items.Host, r.PathValue("id"))
-		if !ok { // host may remove any item, even phone-to-phone relays
-			for _, x := range s.items.All() {
-				if x.ID == r.PathValue("id") {
-					it, ok = x, true
-				}
-			}
-		}
+		it, ok := s.items.Get(r.PathValue("id")) // host may remove any item, even phone-to-phone relays
 		if !ok {
 			writeErr(w, http.StatusNotFound, "no item")
 			return
@@ -186,6 +179,18 @@ func (s *Server) hostRoutes() {
 		}
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	}))
+	hostItem := func(inline bool) http.HandlerFunc {
+		return s.host(func(w http.ResponseWriter, r *http.Request) {
+			it, ok := s.items.Get(r.PathValue("id"))
+			if !ok {
+				http.NotFound(w, r)
+				return
+			}
+			s.serveItem(w, r, it, inline)
+		})
+	}
+	m.HandleFunc("GET /api/host/items/{id}/view", hostItem(true))
+	m.HandleFunc("GET /api/host/items/{id}/download", hostItem(false))
 	m.HandleFunc("POST /api/host/open-folder", s.host(func(w http.ResponseWriter, r *http.Request) {
 		if s.cfg.OpenPath == nil {
 			writeErr(w, http.StatusNotImplemented, "not available")

@@ -247,3 +247,34 @@ label.lbl { font-weight: 800; font-size: 14px; display: block; margin-bottom: 4p
   .host-layout { grid-template-columns: 1fr; }
   .chatcard { position: static; height: 75vh; }
 }
+
+/* ---------- previews & viewer ---------- */
+.msg.media { padding: 6px; }
+.msg.media .who, .msg.media .cap, .msg.media .acts, .msg.media .meta { padding: 0 6px; }
+.thumbbtn { all: unset; cursor: zoom-in; position: relative; display: block; border-radius: 12px; overflow: hidden; }
+.thumbbtn:focus-visible { outline: 3px solid var(--accent); }
+.thumb { display: block; width: 260px; max-width: 100%; height: auto; max-height: 300px; object-fit: cover; background: #111; border-radius: 12px; }
+.thumbbtn .play {
+  position: absolute; inset: 0; margin: auto; width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 26px; display: flex; align-items: center; justify-content: center; padding-left: 4px;
+}
+.msg .cap { font-size: 13px; font-weight: 700; margin-top: 4px; word-break: break-word; }
+.msg .audio { width: 240px; max-width: 100%; margin: 4px 0; }
+.msg .file.clickable { cursor: pointer; }
+.msg .file.clickable b { text-decoration: underline; }
+.viewer { position: fixed; inset: 0; z-index: 60; background: rgba(10,8,5,.97); display: flex; flex-direction: column; }
+.viewer .vbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; color: #fff; }
+.viewer .vname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.viewer .vbody { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px; }
+.viewer .vbody img, .viewer .vbody video { max-width: 100%; max-height: 100%; border-radius: 10px; }
+.viewer .vbody iframe { width: min(900px, 100%); height: 100%; border: 0; background: #fff; border-radius: 10px; }
+.viewer .vnone { color: #fff; text-align: center; font-size: 64px; }
+.viewer .vnone p { font-size: 16px; }
+.viewer .vnav {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%;
+  border: 3px solid #fff; background: rgba(0,0,0,.5); color: #fff; font-size: 30px; line-height: 1; cursor: pointer;
+}
+.viewer .vprev { left: 12px; }
+.viewer .vnext { right: 12px; }
+
+a.btn { text-decoration: none; }
