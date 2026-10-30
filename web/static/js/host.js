@@ -132,7 +132,7 @@
     const ico = { ok: "✅", warn: "⚠️", fail: "❌" };
     $("#checks").innerHTML = r.checks
       .map((c) => {
-        const key = `chk_${c.id}_${c.status}`;
+        const key = c.id === "profile" && c.status === "warn" && c.detail === "Public" ? "chk_profile_public" : `chk_${c.id}_${c.status}`;
         const text = JP.has(key) ? t(key, { d: JP.esc(c.detail || r.ip || "") }) : `${c.id}: ${c.status}`;
         return `<div class="check"><span class="ico">${ico[c.status] || "•"}</span><div>${text}</div></div>`;
       })

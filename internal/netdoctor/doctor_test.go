@@ -80,7 +80,7 @@ func TestAllGood(t *testing.T) {
 }
 
 func TestPublicProfileFails(t *testing.T) {
-	r := doctorWith(fakePlatform{profile: "Public", allowed: true}, "192.168.1.5").Run(context.Background(), Options{})
+	r := doctorWith(fakePlatform{profile: "Public", allowed: false}, "192.168.1.5").Run(context.Background(), Options{})
 	c := check(r, "profile")
 	if r.OK || c.Status != Fail || c.Detail != "Public" {
 		t.Fatalf("got %+v", r)
@@ -149,5 +149,20 @@ func TestPreferredIPWins(t *testing.T) {
 	d.PreferIP = "10.0.0.9"
 	if r := d.Run(context.Background(), Options{}); r.IP != "10.0.0.9" {
 		t.Fatalf("got %s", r.IP)
+	}
+}
+
+func TestPublicWithFirewallAllowedIsWarn(t *testing.T) {
+	r := doctorWith(fakePlatform{profile: "Public", allowed: true}, "192.168.1.5").Run(context.Background(), Options{})
+	c := check(r, "profile")
+	if c.Status != Warn || c.Detail != "Public" || !r.OK {
+		t.Fatalf("got %+v", r)
+	}
+}
+
+func TestPublicWithFirewallUnknownFails(t *testing.T) {
+	r := doctorWith(fakePlatform{profile: "Public", fwErr: errors.New("x")}, "192.168.1.5").Run(context.Background(), Options{})
+	if check(r, "profile").Status != Fail || r.OK {
+		t.Fatalf("got %+v", r)
 	}
 }

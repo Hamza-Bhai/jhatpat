@@ -97,20 +97,27 @@ func (d *Doctor) Run(ctx context.Context, opt Options) Report {
 	if chosen != nil {
 		r.IP, r.Adapter = chosen.IP, chosen.Name
 
+		exe, _ := os.Executable()
+		fwAllowed, fwErr := d.Platform.FirewallAllows(exe, d.Port)
+
+		// A Public profile only blocks phones when the firewall has no rule
+		// letting JhatPat in; with one, it is just worth knowing.
 		if prof, err := d.Platform.NetworkProfile(chosen.Name); err != nil {
 			add("profile", Warn, "")
+		} else if prof == "Public" && fwErr == nil && fwAllowed {
+			add("profile", Warn, prof)
 		} else if prof == "Public" {
 			add("profile", Fail, prof)
 		} else if prof != "" {
 			add("profile", OK, prof)
 		}
 
-		exe, _ := os.Executable()
-		if ok, err := d.Platform.FirewallAllows(exe, d.Port); err != nil {
+		switch {
+		case fwErr != nil:
 			add("firewall", Warn, "")
-		} else if !ok {
+		case !fwAllowed:
 			add("firewall", Fail, "")
-		} else {
+		default:
 			add("firewall", OK, "")
 		}
 
