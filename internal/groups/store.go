@@ -194,3 +194,14 @@ func (s *Store) KnownName(persistentID string) (string, bool) {
 	n, ok := s.data.Names[persistentID]
 	return n, ok
 }
+
+// Names returns a copy of all remembered device names keyed by PersistentID.
+func (s *Store) Names() map[string]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[string]string, len(s.data.Names))
+	for k, v := range s.data.Names {
+		out[k] = v
+	}
+	return out
+}

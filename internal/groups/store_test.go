@@ -80,3 +80,13 @@ func TestDeleteAndRename(t *testing.T) {
 		t.Fatal("not deleted")
 	}
 }
+
+func TestNamesReturnsCopy(t *testing.T) {
+	s, _ := Open(t.TempDir())
+	_ = s.RememberName("p1", "A")
+	n := s.Names()
+	n["p1"] = "changed"
+	if got, _ := s.KnownName("p1"); got != "A" || len(s.Names()) != 1 {
+		t.Fatal("Names not a copy")
+	}
+}

@@ -67,6 +67,18 @@ func TestRenameTrimsAndLimits(t *testing.T) {
 	}
 }
 
+func TestLookupFindsAnyState(t *testing.T) {
+	r := NewRegistry()
+	d := r.Request("Phone", "pid1")
+	got, ok := r.Lookup(d.Token)
+	if !ok || got.State != Pending {
+		t.Fatal("pending not found")
+	}
+	if _, ok := r.Lookup("nope"); ok {
+		t.Fatal("bogus found")
+	}
+}
+
 func TestRequestNameFallback(t *testing.T) {
 	r := NewRegistry()
 	d := r.Request("", "pid1")

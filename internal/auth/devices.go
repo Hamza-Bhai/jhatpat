@@ -150,6 +150,18 @@ func (r *Registry) ByToken(token string) (*Device, bool) {
 	return &cp, true
 }
 
+// Lookup finds a device by token in any state.
+func (r *Registry) Lookup(token string) (*Device, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	d, ok := r.byToken[token]
+	if !ok {
+		return nil, false
+	}
+	cp := *d
+	return &cp, true
+}
+
 // Get returns a device in any state.
 func (r *Registry) Get(id string) (*Device, bool) {
 	r.mu.Lock()
