@@ -11,6 +11,7 @@ import (
 	"jhatpat/internal/auth"
 	"jhatpat/internal/events"
 	"jhatpat/internal/items"
+	"jhatpat/internal/netdoctor"
 )
 
 // host guards laptop-owner routes: loopback only, plus the host cookie.
@@ -189,6 +190,24 @@ func (s *Server) hostRoutes() {
 			return
 		}
 		if err := s.cfg.OpenPath(s.cfg.SaveDir); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	}))
+	m.HandleFunc("GET /api/host/doctor", s.host(func(w http.ResponseWriter, r *http.Request) {
+		if s.cfg.Doctor == nil {
+			writeErr(w, http.StatusNotImplemented, "not available")
+			return
+		}
+		writeJSON(w, http.StatusOK, s.cfg.Doctor.Run(r.Context(), netdoctor.Options{PhoneTrouble: r.URL.Query().Get("trouble") == "1"}))
+	}))
+	m.HandleFunc("POST /api/host/doctor/firewall", s.host(func(w http.ResponseWriter, r *http.Request) {
+		if s.cfg.Doctor == nil {
+			writeErr(w, http.StatusNotImplemented, "not available")
+			return
+		}
+		if err := s.cfg.Doctor.FixFirewall(); err != nil {
 			writeErr(w, http.StatusInternalServerError, err.Error())
 			return
 		}

@@ -2,6 +2,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -17,6 +18,7 @@ import (
 	"jhatpat/internal/events"
 	"jhatpat/internal/groups"
 	"jhatpat/internal/items"
+	"jhatpat/internal/netdoctor"
 	"jhatpat/internal/transfer"
 )
 
@@ -39,6 +41,14 @@ type Config struct {
 	Web fs.FS
 	// OpenPath opens a folder in the OS file manager. Nil disables it.
 	OpenPath func(path string) error
+	// Doctor runs network checks. Nil disables the doctor endpoints.
+	Doctor DoctorRunner
+}
+
+// DoctorRunner is what the host page needs from the Network Doctor.
+type DoctorRunner interface {
+	Run(ctx context.Context, opt netdoctor.Options) netdoctor.Report
+	FixFirewall() error
 }
 
 // Server is the JhatPat HTTP server.
