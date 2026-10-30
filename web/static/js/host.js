@@ -6,6 +6,7 @@
   let lastDoctor = null;
   let browsePath = "";
   const selected = new Set();
+  const scroller = JP.stickyScroll($("#chat"));
 
   // ---------- helpers ----------
   function target() {
@@ -21,6 +22,18 @@
     } catch (e) {
       JP.toast("😟 " + JP.esc(e.message));
     }
+  }
+  // Which items belong to the conversation picked in "Chat with".
+  function inConversation(it) {
+    const { kind, id } = target();
+    if (kind === "device") return it.from === id || it.to.includes(id);
+    if (kind === "group") {
+      const g = state.groups.find((x) => x.id === id);
+      if (!g) return false;
+      const ids = approvedDevices().filter((d) => g.members.includes(d.pid)).map((d) => d.id);
+      return ids.includes(it.from) || it.to.some((x) => ids.includes(x));
+    }
+    return true;
   }
 
   // ---------- render ----------
@@ -85,20 +98,17 @@
       .join("");
   }
 
-  function renderHistory() {
-    $("#history").innerHTML = state.items.length
-      ? state.items
-          .map((it) => {
-            const icon = JP.fileIcon(it.name, it.kind);
-            const body =
-              it.kind === "text"
-                ? `<div class="textbox">${JP.linkify(it.text)}</div><button class="btn small" data-copy="${it.id}">${t("copy")}</button>`
-                : `<div class="item-title">${icon} ${JP.esc(it.name)} <span class="muted">${it.size ? JP.fmtBytes(it.size) : ""}</span></div>`;
-            return `<li><div class="muted">${JP.esc(it.fromName)} → ${JP.esc(it.toNames.join(", "))} · ${new Date(it.createdAt).toLocaleTimeString()}</div>
-              ${body} <button class="btn small" data-remove="${it.id}">${t("remove")}</button></li>`;
-          })
-          .join("")
-      : `<li class="empty">${t("no_items")}</li>`;
+  function renderChat(force) {
+    scroller.update(() => {
+      const list = state.items.filter(inConversation).reverse(); // oldest first
+      $("#feed").innerHTML = list
+        .map((it) => {
+          const mine = it.from === "host";
+          return JP.bubble(it, { mine, who: mine ? "" : it.fromName, download: "", removable: true });
+        })
+        .join("");
+      $("#empty").classList.toggle("hidden", list.length > 0 || $("#pending").children.length > 0);
+    }, force);
   }
 
   function renderAll() {
@@ -108,18 +118,19 @@
     renderApprovals();
     renderDevices();
     renderGroups();
-    renderHistory();
+    renderChat();
   }
 
   function refreshQR() {
     $("#qr").src = "/api/host/qr.png?ts=" + Date.now();
   }
 
-  async function load() {
+  async function load(force) {
     const s = await JP.api("/api/host/state");
     const qrChanged = s.joinURL !== state.joinURL;
     state = s;
     renderAll();
+    if (force) renderChat(true);
     if (qrChanged) refreshQR();
   }
 
@@ -145,32 +156,35 @@
     return r;
   }
 
-  // ---------- uploads from drag-and-drop ----------
+  // ---------- sending ----------
   async function uploadFiles(files) {
     const to = target();
+    $("#empty").classList.add("hidden");
     for (const f of files) {
-      const li = document.createElement("li");
-      li.innerHTML = `<div class="item-title">${JP.fileIcon(f.name)} ${JP.esc(f.name)} <span class="muted">${JP.fmtBytes(f.size)}</span></div>
-        <div class="bar"><i></i></div><div class="muted" data-stat></div>`;
-      $("#uploads").prepend(li);
-      const bar = li.querySelector(".bar");
-      const stat = li.querySelector("[data-stat]");
+      let pb;
+      scroller.update(() => (pb = JP.pendingBubble($("#pending"), f, f.webkitRelativePath || f.name)), true);
       try {
         await JP.uploadFile("/api/host/uploads", f, f.webkitRelativePath || "", to, {
-          onProgress: ({ sent, total, speed }) => {
-            bar.firstElementChild.style.width = (total ? (sent / total) * 100 : 100) + "%";
-            stat.textContent = `${JP.fmtBytes(sent)} / ${JP.fmtBytes(total)} · ${JP.fmtSpeed(speed)} · ${JP.fmtETA((total - sent) / speed)}`;
-          },
+          onProgress: ({ sent, total, speed }) => pb.progress(sent, total, speed),
+          onPause: () => pb.pause(),
         });
-        bar.classList.add("done");
-        bar.firstElementChild.style.width = "100%";
-        stat.textContent = t("sent");
-        setTimeout(() => li.remove(), 3000);
+        pb.done();
+        await load(true);
       } catch (e) {
-        bar.classList.add("err");
-        stat.textContent = t("failed") + ": " + e.message;
+        pb.fail(e.message);
       }
     }
+  }
+
+  async function sendText() {
+    const ta = $("#text");
+    const text = ta.value;
+    if (!text.trim()) return;
+    if (await act(() => JP.api("/api/host/send", { method: "POST", json: { text, to: target() } }))) {
+      ta.value = "";
+      fit();
+    }
+    load(true);
   }
 
   // ---------- laptop file picker ----------
@@ -182,13 +196,14 @@
     $("#browseUp").disabled = !r.parent;
     $("#browseUp").dataset.path = r.parent || "";
     $("#roots").innerHTML = r.roots.map((x) => `<button class="btn small" data-go="${JP.esc(x.path)}">${JP.esc(x.name)}</button>`).join("");
-    $("#browseList").innerHTML = r.entries
-      .map(
-        (e) => `<li><input type="checkbox" data-pick="${JP.esc(e.path)}" ${selected.has(e.path) ? "checked" : ""}>
+    $("#browseList").innerHTML =
+      r.entries
+        .map(
+          (e) => `<li><input type="checkbox" data-pick="${JP.esc(e.path)}" ${selected.has(e.path) ? "checked" : ""}>
         ${e.isDir ? `<button class="linklike" data-go="${JP.esc(e.path)}">📁 ${JP.esc(e.name)}</button>` : `<span>${JP.fileIcon(e.name)} ${JP.esc(e.name)} <span class="muted">${JP.fmtBytes(e.size)}</span></span>`}
       </li>`
-      )
-      .join("") || `<li class="empty">—</li>`;
+        )
+        .join("") || `<li class="empty">—</li>`;
   }
 
   // ---------- events ----------
@@ -207,8 +222,9 @@
     else if (d.copy) {
       const it = state.items.find((x) => x.id === d.copy);
       if (it && (await JP.copy(it.text))) JP.toast(t("copied"), 1500);
-    } else if (d.go) browse(d.go);
-    else if (d.close !== undefined) el.closest(".modal").classList.add("hidden");
+      return;
+    } else if (d.go) return browse(d.go);
+    else if (d.close !== undefined) return el.closest(".modal").classList.add("hidden");
     else return;
     load().catch(() => {});
   });
@@ -225,6 +241,7 @@
     }
   });
 
+  $("#target").onchange = () => renderChat(true);
   $("#newPin").onclick = async () => { await act(() => JP.api("/api/host/pin/regenerate", { method: "POST" })); await load(); refreshQR(); };
   $("#phoneTrouble").onclick = async () => { $("#doctorModal").classList.remove("hidden"); await runDoctor(true); };
   $("#doctorPill").onclick = async () => { $("#doctorModal").classList.remove("hidden"); await runDoctor(false); };
@@ -237,33 +254,36 @@
     if (await act(() => JP.api("/api/host/groups", { method: "POST", json: { name } }))) $("#groupName").value = "";
     load();
   };
-  $("#sendText").onclick = async () => {
-    const text = $("#text").value;
-    if (!text.trim()) return;
-    if (await act(() => JP.api("/api/host/send", { method: "POST", json: { text, to: target() } }))) {
-      $("#text").value = "";
-      JP.toast(t("sent"), 1500);
-    }
-    load();
-  };
+
+  const fit = JP.autoGrow($("#text"));
+  $("#sendText").onclick = sendText;
+  $("#text").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); }
+  });
+  $("#attachBtn").onclick = () => $("#fileInput").click();
+  $("#fileInput").onchange = (e) => { uploadFiles([...e.target.files]); e.target.value = ""; };
   $("#pickLaptop").onclick = () => { selected.clear(); $("#browseModal").classList.remove("hidden"); browse(browsePath); };
   $("#browseUp").onclick = (e) => { e.stopPropagation(); browse($("#browseUp").dataset.path); };
   $("#sendSelected").onclick = async () => {
     if (!selected.size) return;
     if (await act(() => JP.api("/api/host/send", { method: "POST", json: { paths: [...selected], to: target() } }))) {
       $("#browseModal").classList.add("hidden");
-      JP.toast(t("sent"), 1500);
     }
-    load();
+    load(true);
   };
 
-  const drop = $("#drop");
-  drop.onclick = () => $("#fileInput").click();
-  drop.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") $("#fileInput").click(); };
-  $("#fileInput").onchange = (e) => { uploadFiles([...e.target.files]); e.target.value = ""; };
-  ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
-  ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
-  drop.addEventListener("drop", (e) => uploadFiles([...e.dataTransfer.files]));
+  // The whole chat panel is a drop zone.
+  const card = $("#chatCard");
+  let depth = 0;
+  card.addEventListener("dragenter", (e) => { e.preventDefault(); depth++; card.classList.add("over"); });
+  card.addEventListener("dragover", (e) => e.preventDefault());
+  card.addEventListener("dragleave", () => { if (--depth <= 0) { depth = 0; card.classList.remove("over"); } });
+  card.addEventListener("drop", (e) => {
+    e.preventDefault();
+    depth = 0;
+    card.classList.remove("over");
+    if (e.dataTransfer.files.length) uploadFiles([...e.dataTransfer.files]);
+  });
 
   document.querySelectorAll("[data-theme-btn]").forEach((b) => (b.onclick = () => JP.theme.toggle()));
   $("#langBtn").onclick = () => JP.setLang(JP.lang() === "en" ? "ur" : "en");
@@ -275,9 +295,9 @@
 
   JP.sse("/api/host/events", {
     "device-request": (d) => { JP.toast(`📱 <b>${JP.esc(d.name)}</b> ${t("wants_connect")}`, 6000); load(); },
-    devices: load,
-    item: load,
-    "item-removed": load,
+    devices: () => load(),
+    item: () => load(),
+    "item-removed": () => load(),
     pin: () => load(),
     doctor: renderDoctor,
   });
@@ -285,6 +305,6 @@
   JP.applyI18n();
   $("#langBtn").textContent = t("lang");
   JP.theme.paint();
-  load().catch((e) => JP.toast("😟 " + JP.esc(e.message), 0));
+  load(true).catch((e) => JP.toast("😟 " + JP.esc(e.message), 0));
   runDoctor(false);
 })();

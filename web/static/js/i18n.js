@@ -83,6 +83,13 @@
       inbox: "📥 Inbox",
       kicked: "You were removed. Reload to join again.",
       reload: "Reload",
+      chat_title: "💬 Chat",
+      chat_with: "Chat with",
+      to_label: "To:",
+      type_msg: "Type a message…",
+      chat_empty: "Say salam! Send a file, photo or message.",
+      attach: "Send files",
+      drop_files: "Drop files on the chat to send",
       lang: "اردو",
     },
     ur: {
@@ -165,6 +172,13 @@
       inbox: "📥 Inbox",
       kicked: "Aapko hata diya gaya. Dobara judne ke liye reload karein.",
       reload: "Reload",
+      chat_title: "💬 Chat",
+      chat_with: "Kis se baat",
+      to_label: "Kisko:",
+      type_msg: "Message likhein…",
+      chat_empty: "Salam kahein! File, photo ya message bhejein.",
+      attach: "Files bhejo",
+      drop_files: "Bhejne ke liye files chat pe phenkein",
       lang: "English",
     },
   };
@@ -182,6 +196,7 @@
     document.documentElement.lang = lang === "ur" ? "ur-Latn" : "en";
     root.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = JP.t(el.dataset.i18n)));
     root.querySelectorAll("[data-i18n-ph]").forEach((el) => (el.placeholder = JP.t(el.dataset.i18nPh)));
+    root.querySelectorAll("[data-i18n-title]").forEach((el) => (el.title = JP.t(el.dataset.i18nTitle)));
   };
   JP.setLang = function (l) {
     lang = l === "ur" ? "ur" : "en";

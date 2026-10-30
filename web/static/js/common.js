@@ -189,3 +189,79 @@
     return JP.api(`${base}/${id}/finish`, { method: "POST" });
   };
 })();
+
+// ---- chat bubbles (shared by phone and laptop pages) ----
+(function () {
+  const JP = window.JP;
+  // opts: { mine, who, download (url or ""), removable }
+  JP.bubble = function (it, opts) {
+    const t = JP.t;
+    const time = new Date(it.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const who = opts.who ? `<div class="who">${JP.esc(opts.who)}</div>` : "";
+    let body;
+    if (it.kind === "text") {
+      body = `<div class="txt">${JP.linkify(it.text)}</div>
+        <div class="acts"><button class="btn small" data-copy="${it.id}">${t("copy")}</button></div>`;
+    } else {
+      const name = it.name + (it.kind === "folder" ? ".zip" : "");
+      body = `<div class="file"><span class="ico">${JP.fileIcon(it.name, it.kind)}</span>
+        <div><b>${JP.esc(name)}</b><span class="muted" style="color:inherit;opacity:.8">${it.size ? JP.fmtBytes(it.size) : ""}</span></div></div>
+        ${opts.download ? `<div class="acts"><a class="btn small primary" href="${opts.download}" download>${t("download")}</a></div>` : ""}`;
+    }
+    const x = opts.removable ? `<button class="x" title="${t("remove")}" data-remove="${it.id}">✕</button>` : "";
+    return `<div class="msg ${opts.mine ? "mine" : ""}" data-id="${it.id}">${who}${body}
+      <div class="meta">${opts.mine ? JP.esc("→ " + it.toNames.join(", ")) + " · " : ""}${time}${opts.mine ? " ✓" : ""}${x}</div></div>`;
+  };
+
+  // A temporary bubble for a file being uploaded; returns {el, progress(sent,total,speed), done(), fail(msg), pause(onResume)}.
+  JP.pendingBubble = function (container, file, label) {
+    const el = document.createElement("div");
+    el.className = "msg mine";
+    el.innerHTML = `<div class="file"><span class="ico">${JP.fileIcon(file.name)}</span>
+      <div><b>${JP.esc(label || file.name)}</b><span style="opacity:.8">${JP.fmtBytes(file.size)}</span></div></div>
+      <div class="bar"><i></i></div><div class="meta" data-stat>…</div>`;
+    container.appendChild(el);
+    const bar = el.querySelector(".bar");
+    const stat = el.querySelector("[data-stat]");
+    return {
+      el,
+      progress(sent, total, speed) {
+        bar.classList.remove("err");
+        bar.firstElementChild.style.width = (total ? (sent / total) * 100 : 100) + "%";
+        stat.textContent = `${Math.floor(total ? (sent / total) * 100 : 100)}% · ${JP.fmtSpeed(speed)} · ${JP.fmtETA((total - sent) / speed)}`;
+      },
+      done() { el.remove(); },
+      fail(msg) { bar.classList.add("err"); stat.textContent = JP.t("failed") + ": " + msg; },
+      pause() {
+        return new Promise((resolve) => {
+          bar.classList.add("err");
+          stat.innerHTML = `${JP.t("paused")} <button class="btn small">${JP.t("resume")}</button>`;
+          const go = () => { window.removeEventListener("online", go); document.removeEventListener("visibilitychange", vis); stat.textContent = "…"; resolve(); };
+          const vis = () => { if (!document.hidden) go(); };
+          stat.querySelector("button").onclick = go;
+          window.addEventListener("online", go);
+          document.addEventListener("visibilitychange", vis);
+        });
+      },
+    };
+  };
+
+  // Keeps a scroll box pinned to the bottom when the user is already there.
+  JP.stickyScroll = function (box) {
+    const nearBottom = () => box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    return {
+      update(fn, force) {
+        const stick = force || nearBottom();
+        fn();
+        if (stick) box.scrollTop = box.scrollHeight;
+      },
+    };
+  };
+
+  // Grows a textarea with its content.
+  JP.autoGrow = function (ta) {
+    const fit = () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight + 4, 140) + "px"; };
+    ta.addEventListener("input", fit);
+    return fit;
+  };
+})();

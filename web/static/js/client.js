@@ -1,11 +1,10 @@
-// JhatPat phone (client) page.
+// JhatPat phone (client) page: a chat with the laptop and other devices.
 (function () {
   const $ = (s) => document.querySelector(s);
   const t = JP.t;
   let me = null;
   let items = [];
-  let seen = new Set(JSON.parse(JP.store("jp_seen") || "[]"));
-  let resumeWaiters = [];
+  const scroller = JP.stickyScroll($("#chat"));
 
   function target() {
     const [kind, id] = ($("#target").value || "host:").split(":");
@@ -24,119 +23,83 @@
     if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
   }
 
-  function render() {
-    const incoming = items.filter((it) => it.from !== me.id);
-    const unseen = incoming.filter((it) => !seen.has(it.id)).length;
-    $("#badge").textContent = unseen;
-    $("#badge").classList.toggle("hidden", !unseen);
-    $("#inbox").innerHTML = items.length
-      ? items
-          .map((it) => {
-            const mine = it.from === me.id;
-            const who = mine ? `→ ${JP.esc(it.toNames.join(", "))}` : `${t("from")} ${JP.esc(it.fromName)}`;
-            const dl = `/api/dev/items/${it.id}/download`;
-            const body =
-              it.kind === "text"
-                ? `<div class="textbox">${JP.linkify(it.text)}</div><button class="btn small" data-copy="${it.id}">${t("copy")}</button>`
-                : `<div class="item-title">${JP.fileIcon(it.name, it.kind)} ${JP.esc(it.name)}${it.kind === "folder" ? ".zip" : ""} <span class="muted">${it.size ? JP.fmtBytes(it.size) : ""}</span></div>
-                   ${mine ? "" : `<a class="btn small primary" href="${dl}" download data-dl="${it.id}">${t("download")}</a>`}`;
-            return `<li><div class="muted">${who} · ${new Date(it.createdAt).toLocaleTimeString()}</div>${body}</li>`;
-          })
-          .join("")
-      : `<li class="empty">${t("no_items")}</li>`;
+  function render(force) {
+    scroller.update(() => {
+      const list = items.slice().reverse(); // oldest first, like a chat
+      $("#feed").innerHTML = list
+        .map((it) => {
+          const mine = it.from === me.id;
+          return JP.bubble(it, {
+            mine,
+            who: mine ? "" : it.fromName,
+            download: mine || it.kind === "text" ? "" : `/api/dev/items/${it.id}/download`,
+          });
+        })
+        .join("");
+      $("#empty").classList.toggle("hidden", list.length > 0 || $("#pending").children.length > 0);
+    }, force);
   }
 
-  async function load() {
+  async function load(force) {
     items = await JP.api("/api/dev/items");
-    render();
+    render(force);
   }
-  function markSeen(id) {
-    seen.add(id);
-    JP.store("jp_seen", JSON.stringify([...seen].slice(-500)));
-    render();
-  }
-
-  function waitForResume(bar, stat) {
-    return new Promise((resolve) => {
-      bar.classList.add("err");
-      stat.innerHTML = `${t("paused")} <button class="btn small" data-resume>${t("resume")}</button>`;
-      const done = () => {
-        bar.classList.remove("err");
-        stat.textContent = "";
-        resumeWaiters = resumeWaiters.filter((f) => f !== done);
-        resolve();
-      };
-      stat.querySelector("[data-resume]").onclick = done;
-      resumeWaiters.push(done);
-    });
-  }
-  // Network came back or the page became visible again: continue paused uploads.
-  const wake = () => resumeWaiters.slice().forEach((f) => f());
-  window.addEventListener("online", wake);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) wake(); });
 
   async function uploadFiles(files) {
     const to = target();
+    $("#empty").classList.add("hidden");
     for (const f of files) {
       const rel = f.webkitRelativePath || "";
-      const li = document.createElement("li");
-      li.innerHTML = `<div class="item-title">${JP.fileIcon(f.name)} ${JP.esc(rel || f.name)} <span class="muted">${JP.fmtBytes(f.size)}</span></div>
-        <div class="bar"><i></i></div><div class="muted" data-stat></div>`;
-      $("#uploads").prepend(li);
-      const bar = li.querySelector(".bar");
-      const stat = li.querySelector("[data-stat]");
+      let pb;
+      scroller.update(() => (pb = JP.pendingBubble($("#pending"), f, rel || f.name)), true);
       try {
         await JP.uploadFile("/api/dev/uploads", f, rel, to, {
-          onProgress: ({ sent, total, speed }) => {
-            bar.firstElementChild.style.width = (total ? (sent / total) * 100 : 100) + "%";
-            stat.textContent = `${Math.floor(total ? (sent / total) * 100 : 100)}% · ${JP.fmtSpeed(speed)} · ${JP.fmtETA((total - sent) / speed)}`;
-          },
-          onPause: () => waitForResume(bar, stat),
+          onProgress: ({ sent, total, speed }) => pb.progress(sent, total, speed),
+          onPause: () => pb.pause(),
         });
-        bar.classList.add("done");
-        bar.firstElementChild.style.width = "100%";
-        stat.textContent = t("sent") + " 🎉";
-        setTimeout(() => li.remove(), 4000);
+        pb.done();
+        await load(true);
       } catch (e) {
-        bar.classList.add("err");
-        stat.textContent = t("failed") + ": " + e.message;
+        pb.fail(e.message);
       }
+    }
+  }
+
+  async function sendText() {
+    const ta = $("#text");
+    const text = ta.value;
+    if (!text.trim()) return;
+    try {
+      await JP.api("/api/dev/text", { method: "POST", json: { text, to: target() } });
+      ta.value = "";
+      fit();
+      await load(true);
+    } catch (e) {
+      JP.toast("😟 " + JP.esc(e.message));
     }
   }
 
   // ---------- events ----------
   document.addEventListener("click", async (e) => {
-    const el = e.target.closest("[data-copy], [data-dl]");
+    const el = e.target.closest("[data-copy]");
     if (!el) return;
-    if (el.dataset.copy) {
-      const it = items.find((x) => x.id === el.dataset.copy);
-      if (it && (await JP.copy(it.text))) JP.toast(t("copied"), 1500);
-      markSeen(el.dataset.copy);
-    } else if (el.dataset.dl) {
-      markSeen(el.dataset.dl);
-    }
+    const it = items.find((x) => x.id === el.dataset.copy);
+    if (it && (await JP.copy(it.text))) JP.toast(t("copied"), 1500);
   });
 
-  $("#sendBtn").onclick = () => $("#fileInput").click();
+  const fit = JP.autoGrow($("#text"));
+  $("#sendText").onclick = sendText;
+  $("#attachBtn").onclick = () => $("#fileInput").click();
   $("#folderBtn").onclick = () => $("#folderInput").click();
   $("#fileInput").onchange = (e) => { uploadFiles([...e.target.files]); e.target.value = ""; };
   $("#folderInput").onchange = (e) => { uploadFiles([...e.target.files]); e.target.value = ""; };
   // Folder picking works on Android/desktop browsers, not on iOS Safari.
   const canFolder = "webkitdirectory" in document.createElement("input") && !/iPhone|iPad|iPod/.test(navigator.userAgent);
   $("#folderBtn").classList.toggle("hidden", !canFolder);
-
-  $("#sendText").onclick = async () => {
-    const text = $("#text").value;
-    if (!text.trim()) return;
-    try {
-      await JP.api("/api/dev/text", { method: "POST", json: { text, to: target() } });
-      $("#text").value = "";
-      JP.toast(t("sent") + " 🎉", 1500);
-      load();
-    } catch (e) {
-      JP.toast("😟 " + JP.esc(e.message));
-    }
-  };
+  // Desktop browsers: Enter sends, Shift+Enter makes a new line.
+  $("#text").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !("ontouchstart" in window)) { e.preventDefault(); sendText(); }
+  });
 
   document.querySelectorAll("[data-theme-btn]").forEach((b) => (b.onclick = () => JP.theme.toggle()));
   $("#langBtn").onclick = () => JP.setLang(JP.lang() === "en" ? "ur" : "en");
@@ -147,7 +110,7 @@
   });
 
   function kicked() {
-    $("#mainView").classList.add("hidden");
+    $("#shell").classList.add("hidden");
     $("#kickedView").classList.remove("hidden");
   }
 
@@ -162,17 +125,14 @@
       throw e;
     }
     $("#me").textContent = me.name;
-    await Promise.all([load(), loadTargets()]);
+    await Promise.all([load(true), loadTargets()]);
     const es = JP.sse("/api/dev/events", {
       item: async (d) => {
         await load();
         const it = d && items.find((x) => x.id === d.id);
-        if (it && it.from !== me.id) {
-          if (navigator.vibrate) navigator.vibrate(80);
-          JP.toast(`📥 ${JP.esc(it.fromName)}: ${JP.esc(it.kind === "text" ? it.text.slice(0, 60) : it.name)}`, 2500);
-        }
+        if (it && it.from !== me.id && navigator.vibrate) navigator.vibrate(80);
       },
-      "item-removed": load,
+      "item-removed": () => load(),
       kicked: () => { es.close(); kicked(); },
     });
     setInterval(() => loadTargets().catch(() => {}), 15000);

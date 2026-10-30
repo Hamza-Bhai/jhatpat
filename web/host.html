@@ -23,64 +23,61 @@
 
   <div id="approvals" class="stack" style="margin-bottom:18px"></div>
 
-  <div class="grid">
-    <section class="card sun">
-      <h2 data-i18n="connect_title"></h2>
-      <p class="muted" data-i18n="connect_help"></p>
-      <div class="row" style="align-items:flex-start">
-        <img class="qr" id="qr" alt="QR code">
-        <div class="stack" style="flex:1;min-width:150px">
-          <div class="muted">PIN</div>
-          <div class="pin" id="pin">····</div>
-          <div class="muted"><span data-i18n="address"></span>: <b id="joinLink">—</b></div>
-          <button class="btn small" id="newPin" data-i18n="new_pin"></button>
-          <button class="btn small" id="phoneTrouble" data-i18n="phone_trouble"></button>
+  <div class="host-layout">
+    <div class="side">
+      <section class="card sun">
+        <h2 data-i18n="connect_title"></h2>
+        <p class="muted" data-i18n="connect_help"></p>
+        <div class="row" style="align-items:flex-start">
+          <img class="qr" id="qr" alt="QR code">
+          <div class="stack" style="flex:1;min-width:120px">
+            <div class="muted">PIN</div>
+            <div class="pin" id="pin">····</div>
+            <div class="muted"><span data-i18n="address"></span>: <b id="joinLink">—</b></div>
+            <button class="btn small" id="newPin" data-i18n="new_pin"></button>
+            <button class="btn small" id="phoneTrouble" data-i18n="phone_trouble"></button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="card">
-      <h2 data-i18n="send_title"></h2>
-      <div class="stack">
-        <div>
-          <label class="lbl" for="target" data-i18n="send_to"></label>
+      <section class="card">
+        <h2 data-i18n="devices_title"></h2>
+        <ul class="list" id="devices"></ul>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="groups_title"></h2>
+        <div class="row" style="flex-wrap:nowrap">
+          <input type="text" id="groupName" data-i18n-ph="new_group_ph" maxlength="40">
+          <button class="btn primary" id="createGroup" data-i18n="create"></button>
+        </div>
+        <ul class="list" id="groups" style="margin-top:8px"></ul>
+      </section>
+    </div>
+
+    <section class="card chatcard" id="chatCard">
+      <div class="chat-head">
+        <h2 style="margin:0" data-i18n="chat_title"></h2>
+        <div class="row">
+          <label class="lbl" for="target" style="margin:0" data-i18n="chat_with"></label>
           <select id="target"></select>
+          <button class="btn small" id="openFolder" data-i18n="open_folder"></button>
         </div>
-        <div class="drop" id="drop" tabindex="0" role="button">
-          <span class="emoji">🎁</span>
-          <b data-i18n="drop_here"></b>
-          <div class="muted" data-i18n="drop_sub"></div>
-        </div>
-        <input type="file" id="fileInput" multiple class="hidden">
-        <button class="btn yellow" id="pickLaptop" style="width:100%" data-i18n="pick_laptop"></button>
-        <textarea id="text" data-i18n-ph="text_ph"></textarea>
-        <button class="btn primary" id="sendText" data-i18n="send"></button>
       </div>
-    </section>
-
-    <section class="card">
-      <h2 data-i18n="devices_title"></h2>
-      <ul class="list" id="devices"></ul>
-    </section>
-
-    <section class="card">
-      <h2 data-i18n="groups_title"></h2>
-      <div class="row" style="flex-wrap:nowrap">
-        <input type="text" id="groupName" data-i18n-ph="new_group_ph" maxlength="40">
-        <button class="btn primary" id="createGroup" data-i18n="create"></button>
+      <div class="chat" id="chat">
+        <div class="chat-empty" id="empty"><span class="big">🎁</span><span data-i18n="drop_files"></span></div>
+        <div id="feed" style="display:contents"></div>
+        <div id="pending" style="display:contents"></div>
       </div>
-      <ul class="list" id="groups" style="margin-top:8px"></ul>
+      <div class="composer">
+        <button class="btn roundbtn yellow" id="attachBtn" data-i18n-title="attach" aria-label="Send files">📎</button>
+        <button class="btn roundbtn yellow" id="pickLaptop" data-i18n-title="pick_laptop" aria-label="Pick from laptop">📁</button>
+        <textarea id="text" rows="1" data-i18n-ph="type_msg"></textarea>
+        <button class="btn roundbtn primary" id="sendText" aria-label="Send">➤</button>
+      </div>
+      <input type="file" id="fileInput" multiple class="hidden">
     </section>
   </div>
-
-  <section class="card" style="margin-top:18px">
-    <div class="row spread">
-      <h2 data-i18n="history_title"></h2>
-      <button class="btn small" id="openFolder" data-i18n="open_folder"></button>
-    </div>
-    <ul class="list" id="uploads"></ul>
-    <ul class="list" id="history"></ul>
-  </section>
 </div>
 
 <div class="modal hidden" id="doctorModal">
