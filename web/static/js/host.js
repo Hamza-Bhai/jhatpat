@@ -290,12 +290,6 @@
   });
 
   document.querySelectorAll("[data-theme-btn]").forEach((b) => (b.onclick = () => JP.theme.toggle()));
-  $("#langBtn").onclick = () => JP.setLang(JP.lang() === "en" ? "ur" : "en");
-  document.addEventListener("jp-lang", () => {
-    $("#langBtn").textContent = t("lang");
-    renderAll();
-    if (lastDoctor) renderDoctor(lastDoctor);
-  });
 
   JP.sse("/api/host/events", {
     "device-request": (d) => { JP.toast(`📱 <b>${JP.esc(d.name)}</b> ${t("wants_connect")}`, 6000); load(); runDoctor(false); },
@@ -307,7 +301,6 @@
   });
 
   JP.applyI18n();
-  $("#langBtn").textContent = t("lang");
   JP.theme.paint();
   load(true).catch((e) => JP.toast("😟 " + JP.esc(e.message), 0));
   runDoctor(false);

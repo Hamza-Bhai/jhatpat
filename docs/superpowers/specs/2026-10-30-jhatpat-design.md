@@ -236,9 +236,9 @@ box · history list with per-item progress · "📂 Open folder" button.
 **Client page**: header · two big buttons 📤 Bhejo / 📥 Lo (with unread
 count) · text box · inbox list · progress.
 
-Language: English as the base UI for an international audience, with a
-Roman Urdu option; all strings live in one translation file so others can
-add languages.
+Language: English only (owner decision, 2026-10-30: the project is an
+open-source repo for an international audience). All UI strings live in
+`web/static/js/i18n.js`.
 
 ## 12. Distribution and open source
 

@@ -1,4 +1,4 @@
-// JhatPat translations. Add a language by copying "en" and translating values.
+// JhatPat UI strings. All visible text lives here so it stays consistent.
 (function () {
   const JP = (window.JP = window.JP || {});
   const dict = {
@@ -91,119 +91,18 @@
       chat_empty: "Say salam! Send a file, photo or message.",
       attach: "Send files",
       drop_files: "Drop files on the chat to send",
-      lang: "اردو",
-    },
-    ur: {
-      tagline: "Phone ↔ Laptop, WiFi ke zariye",
-      connect_title: "📱 Phone jorein",
-      connect_help: "Phone ke camera se QR scan karein, ya link khol ke PIN daalein.",
-      new_pin: "🔄 Naya PIN",
-      phone_trouble: "😟 Mera phone nahi khol raha",
-      send_title: "🎁 Phones ko bhejein",
-      send_to: "Kisko bhejna hai",
-      to_all: "📢 Sab ko",
-      to_laptop: "💻 Laptop",
-      drop_here: "Files yahan phenkein!",
-      drop_sub: "ya tap karke chunein",
-      pick_laptop: "📁 Laptop se file/folder chunein",
-      text_ph: "Text ya link likhein / paste karein…",
-      send: "Bhejo",
-      devices_title: "📱 Devices",
-      no_devices: "Abhi koi phone nahi. QR scan karein!",
-      approve: "✅ Ijazat do",
-      block: "⛔ Rok do",
-      kick: "Hatao",
-      rename: "Naam badlo",
-      wants_connect: "connect hona chahta hai",
-      groups_title: "👨‍👩‍👧 Groups",
-      new_group_ph: "Naye group ka naam (jaise Ghar wale)",
-      create: "Banao",
-      delete: "Mitao",
-      members: "Members",
-      no_known: "Jin devices ko ijazat denge wo yahan aayenge.",
-      history_title: "🕘 History",
-      no_items: "Abhi kuch nahi bheja.",
-      open_folder: "📂 Aayi hui files ka folder",
-      download: "⬇️ Download",
-      copy: "📋 Copy",
-      copied: "Copy ho gaya!",
-      remove: "Hatao",
-      from: "se",
-      to: "ko",
-      sent: "Chala gaya!",
-      failed: "Nahi gaya",
-      paused: "Ruk gaya — dobara chalane ke liye tap karein",
-      resume: "▶️ Dobara chalao",
-      doctor_ok: "😊 Sab theek hai",
-      doctor_bad: "😟 Masla hai — tap karein",
-      doctor_title: "🩺 Network Doctor",
-      doctor_rerun: "Dobara check karo",
-      close: "Band karo",
-      fix_firewall: "🛡️ JhatPat ko ijazat do (admin)",
-      chk_adapter_ok: "{d} se connected hai.",
-      chk_adapter_warn: "Virtual adapter ({d}) use ho raha hai. Phone shayad na pohnche — WiFi se connect karein.",
-      chk_adapter_fail: "Laptop kisi network se connected nahi. Laptop ko usi WiFi se jorein jis pe phone hai.",
-      chk_profile_ok: "Network type: {d}.",
-      chk_profile_warn: "Network type check nahi ho saka.",
-      chk_profile_fail: "Aapka WiFi 'Public' pe hai, is liye Windows phones ko rok raha hai. Hal: Settings → Network & Internet → Wi-Fi → apna network → Network profile type → Private.",
-      chk_profile_public: "Aapka WiFi Public pe hai, lekin firewall JhatPat ko ijazat deta hai, is liye phone connect ho sakte hain. Ghar ke apne WiFi pe aap isay Private bhi kar sakte hain.",
-      chk_firewall_seen: "Ek phone connect ho chuka hai, matlab network aur firewall JhatPat ko rasta de rahe hain. 🎉",
-      chk_firewall_ok: "Firewall JhatPat ko ijazat deta hai.",
-      chk_firewall_warn: "Firewall check nahi ho saka. Agar phone connect na ho to Windows ke poochne pe Allow karein.",
-      chk_firewall_fail: "Windows Firewall JhatPat ko rok raha hai. Neeche wala button dabayein (admin chahiye).",
-      chk_reachable_ok: "WiFi address pe pohncha ja sakta hai.",
-      chk_reachable_fail: "JhatPat aapke WiFi address ({d}) pe nahi mil raha.",
-      "chk_no-phone_warn": "Phir bhi masla? Aapka router devices ko aapas mein baat karne se rok raha ho sakta hai (AP / client isolation). Router settings mein isay band karein — ya hotspot use karein: phone ka hotspot on karein, laptop ko us se jorein, phir naya QR scan karein. Tip: 5 GHz WiFi bohat tez hai.",
-      address: "Address",
-      browse_title: "📁 Laptop se chunein",
-      up: "⬆️ Upar",
-      send_selected: "Chuni hui bhejo",
-      join_title: "Laptop pe dikhne wala PIN daalein 🔐",
-      your_name: "Aapke device ka naam",
-      connect: "Connect karo",
-      qr_hint: "QR scan kiya hai? To PIN ki zarurat nahi.",
-      wrong_pin: "Ghalat PIN. Dobara koshish karein.",
-      locked: "Bohat zyada koshishein. 5 minute ruk jayein ya naya PIN maangein.",
-      waiting: "Laptop ki ijazat ka intezar…",
-      waiting_sub: "Laptop wale se kahein ke ✅ Ijazat do dabayein.",
-      blocked: "Laptop ne is device ko rok diya hai.",
-      connected: "Connected ✅",
-      send_btn: "📤 Bhejo",
-      receive_btn: "📥 Aayi hui",
-      send_folder: "📁 Folder bhejo",
-      inbox: "📥 Inbox",
-      kicked: "Aapko hata diya gaya. Dobara judne ke liye reload karein.",
-      reload: "Reload",
-      chat_title: "💬 Chat",
-      chat_with: "Kis se baat",
-      to_label: "Kisko:",
-      type_msg: "Message likhein…",
-      chat_empty: "Salam kahein! File, photo ya message bhejein.",
-      attach: "Files bhejo",
-      drop_files: "Bhejne ke liye files chat pe phenkein",
-      lang: "English",
-    },
+    }
   };
 
-  let lang = JP.store && JP.store("jp_lang") === "ur" ? "ur" : "en";
-
   JP.t = function (key, vars) {
-    let s = (dict[lang] && dict[lang][key]) || dict.en[key] || key;
+    let s = dict.en[key] || key;
     if (vars) Object.keys(vars).forEach((k) => (s = s.split("{" + k + "}").join(vars[k])));
     return s;
   };
   JP.has = (key) => key in dict.en;
-  JP.lang = () => lang;
   JP.applyI18n = function (root = document) {
-    document.documentElement.lang = lang === "ur" ? "ur-Latn" : "en";
     root.querySelectorAll("[data-i18n]").forEach((el) => (el.textContent = JP.t(el.dataset.i18n)));
     root.querySelectorAll("[data-i18n-ph]").forEach((el) => (el.placeholder = JP.t(el.dataset.i18nPh)));
     root.querySelectorAll("[data-i18n-title]").forEach((el) => (el.title = JP.t(el.dataset.i18nTitle)));
-  };
-  JP.setLang = function (l) {
-    lang = l === "ur" ? "ur" : "en";
-    JP.store && JP.store("jp_lang", lang);
-    JP.applyI18n();
-    document.dispatchEvent(new Event("jp-lang"));
   };
 })();

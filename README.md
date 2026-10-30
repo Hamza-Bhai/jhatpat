@@ -18,7 +18,7 @@ both directions. Nothing goes to the internet, so it's fast and private.
 - 👨‍👩‍👧 **Groups and privacy.** Send to one device, a group (like "Family"), or everyone. A device can never see items that weren't sent to it.
 - ⏯️ **Resume.** If the WiFi drops mid-upload, it continues where it stopped.
 - 🩺 **Network Doctor.** Tells you in plain words why a phone can't connect (Public network, firewall, VPN adapter, router isolation) and how to fix it.
-- 🌞/🌙 **Light and dark** themes. 🇬🇧 English and Roman Urdu.
+- 🌞/🌙 **Light and dark** themes.
 - 🧳 **One small file.** No Python, Node or anything else to install.
 
 ## Quick start
@@ -71,16 +71,6 @@ cd jhatpat
 go test ./...
 go build -o jhatpat ./cmd/jhatpat
 ```
-
-## Roman Urdu mein (quick start)
-
-1. [Releases](../../releases) se apne system wali file download karein aur unzip karein.
-2. `jhatpat.exe` chalayein. Windows "protected your PC" kahe to **More info → Run anyway** dabayein.
-3. Laptop ke browser mein JhatPat khul jayega.
-4. Phone ko **usi WiFi** se jorein aur camera se QR scan karein.
-5. Laptop pe **✅ Ijazat do** dabayein. Bas! 🎉
-
-Phone connect na ho to upar wali **🩺 Network Doctor** pill dabayein: wo bata dega ke masla kya hai (aksar WiFi "Public" pe hota hai, usay "Private" karein).
 
 ## License
 

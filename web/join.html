@@ -15,7 +15,6 @@
   <header class="top">
     <div class="logo">⚡ JhatPat</div>
     <div class="row">
-      <button class="btn small" id="langBtn"></button>
       <button class="btn small iconbtn" data-theme-btn title="Light / Dark"></button>
     </div>
   </header>
@@ -106,10 +105,7 @@
   });
 
   document.querySelectorAll("[data-theme-btn]").forEach((b) => (b.onclick = () => JP.theme.toggle()));
-  $("#langBtn").onclick = () => JP.setLang(JP.lang() === "en" ? "ur" : "en");
-  document.addEventListener("jp-lang", () => ($("#langBtn").textContent = JP.t("lang")));
   JP.applyI18n();
-  $("#langBtn").textContent = JP.t("lang");
   JP.theme.paint();
   // Came from the QR link? Then we are already pending.
   JP.api("/api/join/status").then((s) => {

@@ -99,12 +99,6 @@
   });
 
   document.querySelectorAll("[data-theme-btn]").forEach((b) => (b.onclick = () => JP.theme.toggle()));
-  $("#langBtn").onclick = () => JP.setLang(JP.lang() === "en" ? "ur" : "en");
-  document.addEventListener("jp-lang", () => {
-    $("#langBtn").textContent = t("lang");
-    render();
-    loadTargets().catch(() => {});
-  });
 
   function kicked() {
     $("#shell").classList.add("hidden");
@@ -113,7 +107,6 @@
 
   async function start() {
     JP.applyI18n();
-    $("#langBtn").textContent = t("lang");
     JP.theme.paint();
     try {
       me = await JP.api("/api/dev/me");
@@ -132,7 +125,8 @@
       "item-removed": () => load(),
       kicked: () => { es.close(); kicked(); },
     });
-    setInterval(() => loadTargets().catch(() => {}), 15000);
+    // If JhatPat restarted (or we were removed), go back to the join screen.
+    setInterval(() => loadTargets().catch((e) => { if (e.status === 401) location.replace("/"); }), 15000);
   }
   start().catch((e) => JP.toast("😟 " + JP.esc(e.message), 0));
 })();

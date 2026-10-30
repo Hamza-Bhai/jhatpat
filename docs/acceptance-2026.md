@@ -9,7 +9,7 @@ Date: 2026-10-30 · Build: `dist/jhatpat.exe` (Windows 10, Go 1.27)
 | 3 | PIN join → waiting screen → host Allow → phone page | ✅ pass (browser tab acting as phone, via LAN IP) |
 | 4 | Host → phone text with link, inbox badge, Copy | ✅ pass |
 | 5 | Phone → laptop 20 MiB file with emoji name, SHA-256 matches | ✅ pass (288 ms on loopback) |
-| 6 | Light/dark + English/Roman Urdu at 375 px, no horizontal scroll, no console errors | ✅ pass |
+| 6 | Light/dark at 375 px, no horizontal scroll, no console errors | ✅ pass |
 | 7 | Privacy: group of 2 with 3rd device connected → 3rd sees nothing | ✅ automated (`TestGroupSend`, `TestDeviceIsolation`) |
 | 8 | Folder laptop → phone downloads as zip | ✅ automated (`TestFolderDownloadIsZip`) |
 | 9 | QR join from a **real Android phone and iPhone** | ⏳ owner — needs Wi-Fi set to Private first |
