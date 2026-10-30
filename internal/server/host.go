@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 
+	qrcode "github.com/skip2/go-qrcode"
+
 	"jhatpat/internal/auth"
 	"jhatpat/internal/events"
 	"jhatpat/internal/items"
@@ -194,6 +196,21 @@ func (s *Server) hostRoutes() {
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	}))
+	m.HandleFunc("GET /api/host/qr.png", s.host(func(w http.ResponseWriter, r *http.Request) {
+		u := s.joinURL()
+		if u == "" {
+			writeErr(w, http.StatusServiceUnavailable, "no network address yet")
+			return
+		}
+		png, err := qrcode.Encode(u, qrcode.Medium, 512)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(png)
 	}))
 	m.HandleFunc("GET /api/host/doctor", s.host(func(w http.ResponseWriter, r *http.Request) {
 		if s.cfg.Doctor == nil {

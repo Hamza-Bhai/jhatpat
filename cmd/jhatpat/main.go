@@ -2,22 +2,175 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"os"
+	"os/exec"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"sync/atomic"
+	"time"
 
+	qrcode "github.com/skip2/go-qrcode"
+
+	"jhatpat/internal/events"
+	"jhatpat/internal/netdoctor"
 	"jhatpat/internal/server"
+	"jhatpat/web"
+)
+
+const (
+	defaultPort = 8787
+	maxPortTry  = 10
 )
 
 func main() {
-	port := flag.Int("port", 8787, "port to listen on")
+	home, _ := os.UserHomeDir()
+	cfgRoot, _ := os.UserConfigDir()
+	port := flag.Int("port", defaultPort, "port to listen on (tries the next ones if busy)")
+	dir := flag.String("dir", filepath.Join(home, "Downloads", "JhatPat"), "folder for received files")
+	noBrowser := flag.Bool("no-browser", false, "do not open the host page automatically")
+	preferIP := flag.String("ip", "", "network address to put in the QR code (default: best WiFi address)")
 	flag.Parse()
 
-	s, err := server.New(server.Config{Port: *port})
+	ln, err := listen(*port)
+	if err != nil {
+		log.Fatalf("JhatPat could not start: %v", err)
+	}
+	actualPort := ln.Addr().(*net.TCPAddr).Port
+
+	doctor := netdoctor.New(actualPort, *preferIP)
+	srv, err := server.New(server.Config{
+		Port:      actualPort,
+		SaveDir:   *dir,
+		ConfigDir: filepath.Join(cfgRoot, "JhatPat"),
+		Web:       web.FS,
+		OpenPath:  openPath,
+		Doctor:    doctor,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("JhatPat listening on :%d\n", *port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), s.Handler()))
+
+	var ip atomic.Value
+	ip.Store("")
+	if adapters, err := netdoctor.ListAdapters(); err == nil {
+		for _, a := range adapters {
+			if *preferIP == "" || a.IP == *preferIP {
+				ip.Store(a.IP)
+				break
+			}
+		}
+	}
+	srv.SetJoinURL(func() string {
+		cur := ip.Load().(string)
+		if cur == "" {
+			return ""
+		}
+		return fmt.Sprintf("http://%s:%d/j/%s", cur, actualPort, srv.Join().Secret())
+	})
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	go watchNetwork(ctx, doctor, srv, &ip)
+
+	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 15 * time.Second}
+	go func() {
+		if err := httpSrv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	}()
+
+	hostURL := fmt.Sprintf("http://localhost:%d/host?t=%s", actualPort, srv.HostToken())
+	printBanner(srv, ip.Load().(string), actualPort, hostURL, *dir)
+	if !*noBrowser {
+		_ = openURL(hostURL)
+	}
+
+	<-ctx.Done()
+	fmt.Println("\nJhatPat band ho raha hai… (shutting down)")
+	shutCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_ = httpSrv.Shutdown(shutCtx)
+	srv.Shutdown()
+}
+
+// listen binds the first free port from start upwards.
+func listen(start int) (net.Listener, error) {
+	var lastErr error
+	for p := start; p < start+maxPortTry; p++ {
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", p))
+		if err == nil {
+			return ln, nil
+		}
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+// watchNetwork re-runs the doctor every 30s, tells the host page, and
+// switches the QR address when the laptop's IP changes.
+func watchNetwork(ctx context.Context, d *netdoctor.Doctor, srv *server.Server, ip *atomic.Value) {
+	tick := time.NewTicker(30 * time.Second)
+	defer tick.Stop()
+	for {
+		r := d.Run(ctx, netdoctor.Options{})
+		if r.IP != "" && r.IP != ip.Load().(string) {
+			ip.Store(r.IP)
+			srv.Hub().Send("host", events.Event{Type: "pin", Data: map[string]string{"ip": r.IP}})
+		}
+		srv.Hub().Send("host", events.Event{Type: "doctor", Data: r})
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+	}
+}
+
+func printBanner(srv *server.Server, ip string, port int, hostURL, dir string) {
+	fmt.Println()
+	fmt.Println("  ⚡ JhatPat is running")
+	fmt.Println("  ──────────────────────────────────────────")
+	fmt.Printf("  Laptop page : %s\n", hostURL)
+	if ip == "" {
+		fmt.Println("  Phone link  : (no WiFi address found — connect to WiFi)")
+	} else {
+		join := fmt.Sprintf("http://%s:%d", ip, port)
+		fmt.Printf("  Phone link  : %s   PIN: %s\n", join, srv.Join().PIN())
+		if q, err := qrcode.New(fmt.Sprintf("%s/j/%s", join, srv.Join().Secret()), qrcode.Low); err == nil {
+			fmt.Println(q.ToSmallString(false))
+		}
+	}
+	fmt.Printf("  Saving to   : %s\n", dir)
+	fmt.Println("  Press Ctrl+C to stop.")
+	fmt.Println()
+}
+
+func openURL(u string) error {
+	switch runtime.GOOS {
+	case "windows":
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", u).Start()
+	case "darwin":
+		return exec.Command("open", u).Start()
+	default:
+		return exec.Command("xdg-open", u).Start()
+	}
+}
+
+func openPath(p string) error {
+	switch runtime.GOOS {
+	case "windows":
+		return exec.Command("explorer", p).Start()
+	case "darwin":
+		return exec.Command("open", p).Start()
+	default:
+		return exec.Command("xdg-open", p).Start()
+	}
 }
