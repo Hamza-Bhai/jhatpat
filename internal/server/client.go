@@ -43,11 +43,14 @@ func persistentID(w http.ResponseWriter, r *http.Request) string {
 }
 
 func (s *Server) newPending(w http.ResponseWriter, r *http.Request, pid, name string) *auth.Device {
-	if strings.TrimSpace(name) == "" {
+	// The join page pre-fills a guess like "Android Phone"; a name this device
+	// chose before beats that guess, but anything the user typed wins.
+	guess := guessName(r.UserAgent())
+	if n := strings.TrimSpace(name); n == "" || n == guess {
 		if known, ok := s.groups.KnownName(pid); ok {
 			name = known
 		} else {
-			name = guessName(r.UserAgent())
+			name = guess
 		}
 	}
 	if !isLoopback(r) {
@@ -135,6 +138,20 @@ func (s *Server) deviceRoutes() {
 	m := s.mux
 	m.HandleFunc("GET /api/dev/me", s.dev(func(w http.ResponseWriter, r *http.Request, d *auth.Device) {
 		writeJSON(w, http.StatusOK, map[string]string{"id": d.ID, "name": d.Name})
+	}))
+	m.HandleFunc("POST /api/dev/rename", s.dev(func(w http.ResponseWriter, r *http.Request, d *auth.Device) {
+		var req struct{ Name string }
+		if !readJSON(w, r, 4096, &req) {
+			return
+		}
+		if err := s.devices.Rename(d.ID, req.Name); err != nil {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		nd, _ := s.devices.Get(d.ID)
+		_ = s.groups.RememberName(nd.PersistentID, nd.Name)
+		s.devicesChanged()
+		writeJSON(w, http.StatusOK, map[string]string{"id": nd.ID, "name": nd.Name})
 	}))
 	m.HandleFunc("GET /api/dev/items", s.dev(func(w http.ResponseWriter, r *http.Request, d *auth.Device) {
 		writeJSON(w, http.StatusOK, s.views(s.items.Visible(d.ID)))

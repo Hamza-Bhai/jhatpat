@@ -100,6 +100,18 @@
 
   document.querySelectorAll("[data-theme-btn]").forEach((b) => (b.onclick = () => JP.theme.toggle()));
 
+  $("#meBtn").onclick = async () => {
+    const name = prompt(t("your_name"), me.name);
+    if (name === null || !name.trim() || name.trim() === me.name) return;
+    try {
+      me = await JP.api("/api/dev/rename", { method: "POST", json: { name } });
+      $("#me").textContent = me.name;
+      JP.toast("✅ " + JP.esc(me.name), 1500);
+    } catch (e) {
+      JP.toast("😟 " + JP.esc(e.message));
+    }
+  };
+
   function kicked() {
     $("#shell").classList.add("hidden");
     $("#kickedView").classList.remove("hidden");

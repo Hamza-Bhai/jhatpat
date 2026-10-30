@@ -278,3 +278,10 @@ label.lbl { font-weight: 800; font-size: 14px; display: block; margin-bottom: 4p
 .viewer .vnext { right: 12px; }
 
 a.btn { text-decoration: none; }
+
+/* phone: tap your name in the header to rename the device */
+.namebtn {
+  all: unset; cursor: pointer; display: block; font-size: 12px; font-weight: 800; color: var(--muted);
+  letter-spacing: 0; border-bottom: 2px dashed var(--muted); width: fit-content;
+}
+.namebtn:focus-visible { outline: 3px solid var(--accent); }

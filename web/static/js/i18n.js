@@ -70,6 +70,7 @@
       // phone
       join_title: "Enter the PIN shown on the laptop 🔐",
       your_name: "Your device name",
+      edit_name: "Tap to change your device name",
       connect: "Connect",
       qr_hint: "Scanned the QR? Then no PIN needed.",
       wrong_pin: "Wrong PIN. Try again.",
