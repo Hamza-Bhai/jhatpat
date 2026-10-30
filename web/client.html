@@ -1,1 +1,51 @@
-<!doctype html><title>JhatPat</title><p>client
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JhatPat ⚡</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/static/css/sunnypop.css">
+<script src="/static/js/common.js"></script>
+<script src="/static/js/i18n.js"></script>
+<script>JP.theme.init();</script>
+</head>
+<body>
+<div class="phone">
+  <header class="top">
+    <div class="logo">⚡ JhatPat <small id="me"></small></div>
+    <div class="row">
+      <button class="btn small" id="langBtn"></button>
+      <button class="btn small iconbtn" data-theme-btn title="Light / Dark"></button>
+    </div>
+  </header>
+
+  <section class="card sun stack" id="mainView">
+    <div class="muted" data-i18n="connected"></div>
+    <div>
+      <label class="lbl" for="target" data-i18n="send_to"></label>
+      <select id="target"></select>
+    </div>
+    <button class="btn primary big" id="sendBtn" data-i18n="send_btn"></button>
+    <button class="btn yellow big hidden" id="folderBtn" data-i18n="send_folder"></button>
+    <input type="file" id="fileInput" multiple class="hidden">
+    <input type="file" id="folderInput" webkitdirectory multiple class="hidden">
+    <textarea id="text" data-i18n-ph="text_ph"></textarea>
+    <button class="btn" id="sendText" data-i18n="send"></button>
+  </section>
+
+  <section class="card" style="margin-top:18px">
+    <ul class="list" id="uploads"></ul>
+    <h2><span data-i18n="inbox"></span> <span class="badge hidden" id="badge"></span></h2>
+    <ul class="list" id="inbox"></ul>
+  </section>
+
+  <section class="card center hidden" id="kickedView" style="margin-top:18px">
+    <div style="font-size:60px">👋</div>
+    <h2 data-i18n="kicked"></h2>
+    <button class="btn primary" onclick="location.replace('/')" data-i18n="reload"></button>
+  </section>
+</div>
+<script src="/static/js/client.js"></script>
+</body>
+</html>

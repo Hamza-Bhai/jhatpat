@@ -1,1 +1,123 @@
-<!doctype html><title>JhatPat</title><p>join
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JhatPat ⚡</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/static/css/sunnypop.css">
+<script src="/static/js/common.js"></script>
+<script src="/static/js/i18n.js"></script>
+<script>JP.theme.init();</script>
+</head>
+<body>
+<div class="phone">
+  <header class="top">
+    <div class="logo">⚡ JhatPat</div>
+    <div class="row">
+      <button class="btn small" id="langBtn"></button>
+      <button class="btn small iconbtn" data-theme-btn title="Light / Dark"></button>
+    </div>
+  </header>
+
+  <section class="card center" id="pinView">
+    <h2 data-i18n="join_title"></h2>
+    <form id="pinForm" autocomplete="off">
+      <div class="pinboxes">
+        <input inputmode="numeric" pattern="[0-9]*" aria-label="PIN digit 1">
+        <input inputmode="numeric" pattern="[0-9]*" aria-label="PIN digit 2">
+        <input inputmode="numeric" pattern="[0-9]*" aria-label="PIN digit 3">
+        <input inputmode="numeric" pattern="[0-9]*" aria-label="PIN digit 4">
+      </div>
+      <label class="lbl" for="name" data-i18n="your_name" style="text-align:left"></label>
+      <input type="text" id="name" maxlength="40">
+      <p class="muted" id="pinErr" style="color:var(--red)"></p>
+      <button class="btn primary big" type="submit" data-i18n="connect"></button>
+      <p class="muted" data-i18n="qr_hint"></p>
+    </form>
+  </section>
+
+  <section class="card center hidden" id="waitView">
+    <div class="bounce">⏳</div>
+    <h2 data-i18n="waiting"></h2>
+    <p class="muted" data-i18n="waiting_sub"></p>
+  </section>
+
+  <section class="card center hidden" id="blockedView">
+    <div style="font-size:60px">⛔</div>
+    <h2 data-i18n="blocked"></h2>
+  </section>
+</div>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const boxes = [...document.querySelectorAll(".pinboxes input")];
+  let polling = null;
+
+  function show(id) {
+    ["pinView", "waitView", "blockedView"].forEach((v) => $("#" + v).classList.toggle("hidden", v !== id));
+  }
+  async function poll() {
+    try {
+      const s = await JP.api("/api/join/status");
+      if (s.state === "approved") return location.replace("/");
+      if (s.state === "blocked") { clearInterval(polling); return show("blockedView"); }
+      if (s.state === "pending") show("waitView");
+    } catch (_) {}
+  }
+  function startPolling() {
+    if (!polling) polling = setInterval(poll, 1500);
+    poll();
+  }
+
+  boxes.forEach((b, i) => {
+    b.addEventListener("input", () => {
+      // Spread several digits (fast typing, paste, autofill) over the next boxes.
+      const digits = b.value.replace(/\D/g, "").split("");
+      b.value = "";
+      let k = i;
+      for (const d of digits) { if (k >= boxes.length) break; boxes[k++].value = d; }
+      boxes[Math.min(k, boxes.length - 1)].focus();
+      if (boxes.every((x) => x.value)) $("#pinForm").requestSubmit();
+    });
+    b.addEventListener("keydown", (e) => { if (e.key === "Backspace" && !b.value && i > 0) boxes[i - 1].focus(); });
+    b.addEventListener("paste", (e) => {
+      const digits = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 4);
+      if (digits.length === 4) { e.preventDefault(); digits.split("").forEach((d, k) => (boxes[k].value = d)); $("#pinForm").requestSubmit(); }
+    });
+  });
+
+  const ua = navigator.userAgent;
+  $("#name").value = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android Phone" : /Windows/.test(ua) ? "Windows PC" : /Mac/.test(ua) ? "Mac" : "Device";
+
+  $("#pinForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const pin = boxes.map((b) => b.value).join("");
+    if (pin.length !== 4) return;
+    $("#pinErr").textContent = "";
+    try {
+      await JP.api("/api/join", { method: "POST", json: { pin, name: $("#name").value } });
+      startPolling();
+    } catch (err) {
+      $("#pinErr").textContent = err.status === 429 ? JP.t("locked") : err.status === 403 ? JP.t("blocked") : JP.t("wrong_pin");
+      boxes.forEach((b) => (b.value = ""));
+      boxes[0].focus();
+    }
+  });
+
+  document.querySelectorAll("[data-theme-btn]").forEach((b) => (b.onclick = () => JP.theme.toggle()));
+  $("#langBtn").onclick = () => JP.setLang(JP.lang() === "en" ? "ur" : "en");
+  document.addEventListener("jp-lang", () => ($("#langBtn").textContent = JP.t("lang")));
+  JP.applyI18n();
+  $("#langBtn").textContent = JP.t("lang");
+  JP.theme.paint();
+  // Came from the QR link? Then we are already pending.
+  JP.api("/api/join/status").then((s) => {
+    if (s.state === "pending" || s.state === "approved") startPolling();
+    else if (s.state === "blocked") show("blockedView");
+    else boxes[0].focus();
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>
