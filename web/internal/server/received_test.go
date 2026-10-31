@@ -100,7 +100,7 @@ func TestReceivedPathNeverInViews(t *testing.T) {
 	// The save folder itself is shown on the host page on purpose; what must never appear is the
 	// path of a received file (in JSON, Windows backslashes are doubled).
 	filePath := filepath.Join(s.cfg.SaveDir, "photo.jpg")
-	forms := []string{filePath, strings.ReplaceAll(filePath, `\`, `\`)}
+	forms := []string{filePath, strings.ReplaceAll(filePath, `\`, `\\`)}
 	for name, body := range map[string]string{
 		"dev items":  p.do("GET", "/api/dev/items", nil).Body.String(),
 		"host state": h.do("GET", "/api/host/state", nil).Body.String(),
