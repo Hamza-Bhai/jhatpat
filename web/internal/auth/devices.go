@@ -38,6 +38,7 @@ type Device struct {
 	Token        string // secret cookie value, usable only once Approved
 	State        DeviceState
 	JoinedAt     time.Time
+	before       DeviceState // what the device was before it was blocked, so Unblock can undo it
 }
 
 // Registry tracks devices for the current run. Nothing here is persisted:
@@ -101,19 +102,27 @@ func (r *Registry) Approve(id string) error { _, err := r.setState(id, Approved)
 
 // Block rejects a device and its PersistentID for the rest of this run.
 func (r *Registry) Block(id string) error {
-	d, err := r.setState(id, Blocked)
-	if err == nil && d.PersistentID != "" {
-		r.mu.Lock()
-		r.blockedPID[d.PersistentID] = true
-		r.mu.Unlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	d, ok := r.byID[id]
+	if !ok {
+		return ErrNoDevice
 	}
-	return err
+	if d.State != Blocked {
+		d.before = d.State
+	}
+	d.State = Blocked
+	if d.PersistentID != "" {
+		r.blockedPID[d.PersistentID] = true
+	}
+	return nil
 }
 
 // ErrNotBlocked is returned by Unblock for a device that is not blocked.
 var ErrNotBlocked = errors.New("device is not blocked")
 
-// Unblock lifts a block: the device is forgotten and its PersistentID may ask to join again.
+// Unblock undoes a block: the device goes back to what it was (approved devices are back in with
+// no new PIN, pending ones wait for approval again) and its PersistentID is no longer blocked.
 func (r *Registry) Unblock(id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -124,8 +133,7 @@ func (r *Registry) Unblock(id string) error {
 	if d.State != Blocked {
 		return ErrNotBlocked
 	}
-	delete(r.byID, id)
-	delete(r.byToken, d.Token)
+	d.State = d.before
 	delete(r.blockedPID, d.PersistentID)
 	return nil
 }

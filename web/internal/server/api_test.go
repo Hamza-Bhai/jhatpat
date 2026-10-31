@@ -163,17 +163,21 @@ func TestBlockedDeviceCannotRejoin(t *testing.T) {
 	}
 }
 
-func TestUnblockedDeviceCanJoinAgain(t *testing.T) {
+func TestUnblockedDeviceIsBackWithoutAPIN(t *testing.T) {
 	s := newTestServer(t)
 	h := hostOf(t, s)
 	p := s.testClient(t, "192.168.1.20:4000")
 	id := decode[map[string]string](t, p.do("POST", "/api/join", map[string]string{"pin": s.join.PIN()}))["id"]
+	h.do("POST", "/api/host/devices/"+id+"/approve", nil)
 	h.do("POST", "/api/host/devices/"+id+"/block", nil)
+	if st := decode[map[string]string](t, p.do("GET", "/api/join/status", nil))["state"]; st != "blocked" {
+		t.Fatalf("state %s", st)
+	}
 	if rec := h.do("POST", "/api/host/devices/"+id+"/unblock", nil); rec.Code != 200 {
 		t.Fatalf("unblock got %d %s", rec.Code, rec.Body)
 	}
-	if rec := p.do("POST", "/api/join", map[string]string{"pin": s.join.PIN()}); rec.Code != 200 {
-		t.Fatalf("rejoin after unblock got %d", rec.Code)
+	if st := decode[map[string]string](t, p.do("GET", "/api/join/status", nil))["state"]; st != "approved" {
+		t.Fatalf("state %s, want approved", st)
 	}
 }
 
