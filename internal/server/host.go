@@ -10,10 +10,10 @@ import (
 
 	qrcode "github.com/skip2/go-qrcode"
 
-	"jhatpat/internal/auth"
-	"jhatpat/internal/events"
-	"jhatpat/internal/items"
-	"jhatpat/internal/netdoctor"
+	"github.com/Hamza-Bhai/jhatpat/internal/auth"
+	"github.com/Hamza-Bhai/jhatpat/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/internal/items"
+	"github.com/Hamza-Bhai/jhatpat/internal/netdoctor"
 )
 
 // host guards laptop-owner routes: loopback only, plus the host cookie.
@@ -39,6 +39,11 @@ func (s *Server) handleHostPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setCookie(w, cookieHost, s.hostToken, 0)
+	if t != "" {
+		// Drop the token from the address bar so it doesn't linger in history.
+		http.Redirect(w, r, "/host", http.StatusSeeOther)
+		return
+	}
 	s.page(w, "host.html")
 }
 
@@ -191,6 +196,14 @@ func (s *Server) hostRoutes() {
 	}
 	m.HandleFunc("GET /api/host/items/{id}/view", hostItem(true))
 	m.HandleFunc("GET /api/host/items/{id}/download", hostItem(false))
+	m.HandleFunc("POST /api/host/quit", s.host(func(w http.ResponseWriter, r *http.Request) {
+		if s.cfg.Quit == nil {
+			writeErr(w, http.StatusNotImplemented, "not available")
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+		go s.cfg.Quit()
+	}))
 	m.HandleFunc("POST /api/host/open-folder", s.host(func(w http.ResponseWriter, r *http.Request) {
 		if s.cfg.OpenPath == nil {
 			writeErr(w, http.StatusNotImplemented, "not available")

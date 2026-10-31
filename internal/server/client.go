@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"jhatpat/internal/auth"
-	"jhatpat/internal/events"
-	"jhatpat/internal/items"
+	"github.com/Hamza-Bhai/jhatpat/internal/auth"
+	"github.com/Hamza-Bhai/jhatpat/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/internal/items"
 )
 
 // ---- joining ----

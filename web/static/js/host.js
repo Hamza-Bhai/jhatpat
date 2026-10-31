@@ -251,6 +251,11 @@
   $("#doctorPill").onclick = async () => { $("#doctorModal").classList.remove("hidden"); await runDoctor(false); };
   $("#rerun").onclick = () => runDoctor(false);
   $("#fixFirewall").onclick = async () => { await act(() => JP.api("/api/host/doctor/firewall", { method: "POST" })); runDoctor(false); };
+  $("#quitBtn").onclick = async () => {
+    if (!confirm(JP.t("quit_confirm"))) return;
+    await act(() => JP.api("/api/host/quit", { method: "POST" }));
+    document.body.innerHTML = '<div class="wrap"><p style="padding:40px;font-size:18px">⚡ ' + JP.t("quit_done") + "</p></div>";
+  };
   $("#openFolder").onclick = () => act(() => JP.api("/api/host/open-folder", { method: "POST" }));
   $("#createGroup").onclick = async () => {
     const name = $("#groupName").value.trim();

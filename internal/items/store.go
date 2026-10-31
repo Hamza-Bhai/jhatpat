@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"jhatpat/internal/auth"
+	"github.com/Hamza-Bhai/jhatpat/internal/auth"
 )
 
 // Kind is what an item carries.

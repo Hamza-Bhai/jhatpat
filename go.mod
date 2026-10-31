@@ -1,4 +1,4 @@
-module jhatpat
+module github.com/Hamza-Bhai/jhatpat
 
 go 1.24
 

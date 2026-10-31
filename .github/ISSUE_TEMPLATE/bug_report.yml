@@ -1,0 +1,42 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Start JhatPat\n2. Scan the QR code with the phone\n3. ..."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: JhatPat version
+      description: Output of `jhatpat -version`
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Laptop operating system
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: phone
+    attributes:
+      label: Phone and browser
+      placeholder: "Pixel 8, Chrome 130"
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Network Doctor result
+      description: If the problem is connecting, click the status pill at the top of the laptop page and paste what it says.

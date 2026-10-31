@@ -33,6 +33,9 @@
       history_title: "🕘 History",
       no_items: "Nothing sent yet.",
       open_folder: "📂 Open received folder",
+      quit: "⏻ Quit JhatPat",
+      quit_confirm: "Stop JhatPat? Phones will be disconnected.",
+      quit_done: "JhatPat has stopped. You can close this tab.",
       download: "⬇️ Download",
       copy: "📋 Copy",
       copied: "Copied!",
@@ -89,7 +92,7 @@
       chat_with: "Chat with",
       to_label: "To:",
       type_msg: "Type a message…",
-      chat_empty: "Say salam! Send a file, photo or message.",
+      chat_empty: "Say hi! Send a file, photo or message.",
       attach: "Send files",
       drop_files: "Drop files on the chat to send",
     }

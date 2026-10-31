@@ -12,7 +12,7 @@ func TestCreatePersistsAcrossOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	g, err := s.Create("Ghar wale")
+	g, err := s.Create("Family")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestCreatePersistsAcrossOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, ok := s2.Get(g.ID)
-	if !ok || got.Name != "Ghar wale" || len(got.Members) != 2 {
+	if !ok || got.Name != "Family" || len(got.Members) != 2 {
 		t.Fatalf("got %+v ok=%v", got, ok)
 	}
 }
@@ -55,11 +55,11 @@ func TestCorruptFileStartsEmptyAndKeepsBackup(t *testing.T) {
 func TestRememberName(t *testing.T) {
 	dir := t.TempDir()
 	s, _ := Open(dir)
-	if err := s.RememberName("p1", "Ammi ka Phone"); err != nil {
+	if err := s.RememberName("p1", "Mom's Phone"); err != nil {
 		t.Fatal(err)
 	}
 	s2, _ := Open(dir)
-	if n, ok := s2.KnownName("p1"); !ok || n != "Ammi ka Phone" {
+	if n, ok := s2.KnownName("p1"); !ok || n != "Mom's Phone" {
 		t.Fatalf("got %q %v", n, ok)
 	}
 }

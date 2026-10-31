@@ -1,12 +1,14 @@
 # JhatPat ⚡
 
+[![CI](https://github.com/Hamza-Bhai/jhatpat/actions/workflows/ci.yml/badge.svg)](https://github.com/Hamza-Bhai/jhatpat/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Hamza-Bhai/jhatpat?include_prereleases)](https://github.com/Hamza-Bhai/jhatpat/releases)
+
 **Phone ↔ Laptop file transfer over WiFi. No app, no internet.**
 
 JhatPat runs on your laptop. Your phone opens it in its browser: scan a QR
 code and you can send photos, videos, documents, folders, text and links in
 both directions. Nothing goes to the internet, so it's fast and private.
-
-<!-- Add a GIF demo here: docs/demo.gif -->
 
 ## Features
 
@@ -19,19 +21,19 @@ both directions. Nothing goes to the internet, so it's fast and private.
 - ⏯️ **Resume.** If the WiFi drops mid-upload, it continues where it stopped.
 - 🩺 **Network Doctor.** Tells you in plain words why a phone can't connect (Public network, firewall, VPN adapter, router isolation) and how to fix it.
 - 🌞/🌙 **Light and dark** themes.
-- 🧳 **One small file.** No Python, Node or anything else to install.
+- 🧳 **One small file.** No Python, Node or anything else to install. Windows, macOS and Linux.
 
 ## Quick start
 
 1. Download JhatPat for your system from the [Releases](../../releases) page and unzip it.
-2. Run `jhatpat` (on Windows, double-click `jhatpat.exe`).
+2. Run `jhatpat` (on Windows, double-click `jhatpat.exe`; no terminal window opens).
    - Windows may show **"Windows protected your PC"** because the app isn't code-signed. Click **More info → Run anyway**.
    - If Windows Firewall asks, click **Allow access** (tick *Private networks*).
 3. The JhatPat page opens in your laptop's browser.
 4. Connect your phone to the **same WiFi**, then scan the QR code with the phone camera.
 5. Tap **✅ Allow** on the laptop. Done: send away! 🎉
 
-Received files are saved to `Downloads/JhatPat`.
+Received files are saved to `Downloads/JhatPat`. To stop JhatPat, click **Quit JhatPat** at the top of the laptop page (or press `Ctrl+C` if you started it from a terminal).
 
 ### Options
 
@@ -40,7 +42,10 @@ jhatpat -port 8787          # port (tries the next ones if busy)
 jhatpat -dir D:\Inbox       # where received files go
 jhatpat -ip 192.168.1.5     # which network address to put in the QR code
 jhatpat -no-browser         # don't open the laptop page automatically
+jhatpat -version            # print the version
 ```
+
+On Windows the released `jhatpat.exe` has no console, so it prints nothing; run a source build (below) if you want terminal output.
 
 ## Troubleshooting
 
@@ -66,11 +71,16 @@ Click the status pill at the top of the laptop page to open the **Network Doctor
 Needs Go 1.24 or newer.
 
 ```bash
-git clone https://github.com/<you>/jhatpat
+git clone https://github.com/Hamza-Bhai/jhatpat
 cd jhatpat
 go test ./...
 go build -o jhatpat ./cmd/jhatpat
+# Windows, no terminal window on double-click: run build-windows.bat (uses -ldflags "-H=windowsgui")
 ```
+
+## Contributing
+
+Issues and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first. To report a security problem, see [SECURITY.md](SECURITY.md).
 
 ## License
 

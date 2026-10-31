@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	"jhatpat/internal/auth"
-	"jhatpat/internal/events"
-	"jhatpat/internal/items"
-	"jhatpat/internal/transfer"
+	"github.com/Hamza-Bhai/jhatpat/internal/auth"
+	"github.com/Hamza-Bhai/jhatpat/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/internal/items"
+	"github.com/Hamza-Bhai/jhatpat/internal/transfer"
 )
 
 // Target says who an item goes to.

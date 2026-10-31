@@ -19,11 +19,14 @@ import (
 
 	qrcode "github.com/skip2/go-qrcode"
 
-	"jhatpat/internal/events"
-	"jhatpat/internal/netdoctor"
-	"jhatpat/internal/server"
-	"jhatpat/web"
+	"github.com/Hamza-Bhai/jhatpat/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/internal/netdoctor"
+	"github.com/Hamza-Bhai/jhatpat/internal/server"
+	"github.com/Hamza-Bhai/jhatpat/web"
 )
+
+// version is set at release time: -ldflags "-X main.version=v1.2.3".
+var version = "dev"
 
 const (
 	defaultPort = 8787
@@ -37,13 +40,21 @@ func main() {
 	dir := flag.String("dir", filepath.Join(home, "Downloads", "JhatPat"), "folder for received files")
 	noBrowser := flag.Bool("no-browser", false, "do not open the host page automatically")
 	preferIP := flag.String("ip", "", "network address to put in the QR code (default: best WiFi address)")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("jhatpat", version)
+		return
+	}
 
 	ln, err := listen(*port)
 	if err != nil {
-		log.Fatalf("JhatPat could not start: %v", err)
+		fatal("JhatPat could not start: %v", err)
 	}
 	actualPort := ln.Addr().(*net.TCPAddr).Port
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
 	doctor := netdoctor.New(actualPort, *preferIP)
 	srv, err := server.New(server.Config{
@@ -53,9 +64,10 @@ func main() {
 		Web:       web.FS,
 		OpenPath:  openPath,
 		Doctor:    doctor,
+		Quit:      stop, // "Quit" button on the host page (no terminal when double-clicked)
 	})
 	if err != nil {
-		log.Fatal(err)
+		fatal("JhatPat could not start: %v", err)
 	}
 
 	var ip atomic.Value
@@ -76,14 +88,12 @@ func main() {
 		return fmt.Sprintf("http://%s:%d/j/%s", cur, actualPort, srv.Join().Secret())
 	})
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer stop()
 	go watchNetwork(ctx, doctor, srv, &ip)
 
 	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 15 * time.Second}
 	go func() {
 		if err := httpSrv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal(err)
+			fatal("JhatPat stopped: %v", err)
 		}
 	}()
 
@@ -94,11 +104,19 @@ func main() {
 	}
 
 	<-ctx.Done()
-	fmt.Println("\nJhatPat band ho raha hai… (shutting down)")
+	fmt.Println("\nJhatPat is shutting down…")
 	shutCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	_ = httpSrv.Shutdown(shutCtx)
 	srv.Shutdown()
+}
+
+// fatal reports a startup error where the user can see it: a dialog on
+// Windows (the GUI build has no console), stderr elsewhere, then exits.
+func fatal(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	showError(msg)
+	log.Fatal(msg)
 }
 
 // listen binds the first free port from start upwards.

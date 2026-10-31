@@ -64,7 +64,10 @@ func decode[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
 
 func hostOf(t *testing.T, s *Server) *client {
 	h := s.testClient(t, hostAddr)
-	if rec := h.do("GET", "/host?t="+s.HostToken(), nil); rec.Code != 200 {
+	if rec := h.do("GET", "/host?t="+s.HostToken(), nil); rec.Code != 303 || rec.Header().Get("Location") != "/host" {
+		t.Fatalf("host token link: %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	if rec := h.do("GET", "/host", nil); rec.Code != 200 {
 		t.Fatalf("host page %d", rec.Code)
 	}
 	return h
@@ -199,7 +202,7 @@ func TestGroupSend(t *testing.T) {
 	a, aid := joinApproved(t, s, h, "192.168.1.20:1", "A")
 	b, bid := joinApproved(t, s, h, "192.168.1.21:1", "B")
 	c, _ := joinApproved(t, s, h, "192.168.1.22:1", "C")
-	g := decode[map[string]any](t, h.do("POST", "/api/host/groups", map[string]string{"name": "Ghar"}))
+	g := decode[map[string]any](t, h.do("POST", "/api/host/groups", map[string]string{"name": "Family"}))
 	gid := g["id"].(string)
 	pa, _ := s.devices.Get(aid)
 	pb, _ := s.devices.Get(bid)
@@ -373,9 +376,23 @@ func TestRestartRequiresApproval(t *testing.T) {
 func TestApproveRemembersName(t *testing.T) {
 	s := newTestServer(t)
 	h := hostOf(t, s)
-	_, id := joinApproved(t, s, h, "192.168.1.20:1", "Ammi ka Phone")
+	_, id := joinApproved(t, s, h, "192.168.1.20:1", "Mom's Phone")
 	d, _ := s.devices.Get(id)
-	if n, ok := s.groups.KnownName(d.PersistentID); !ok || n != "Ammi ka Phone" {
+	if n, ok := s.groups.KnownName(d.PersistentID); !ok || n != "Mom's Phone" {
 		t.Fatalf("got %q", n)
+	}
+}
+
+func TestSecurityHeaders(t *testing.T) {
+	s := newTestServer(t)
+	rec := s.testClient(t, hostAddr).do("GET", "/api/health", nil)
+	for k, want := range map[string]string{
+		"X-Content-Type-Options": "nosniff",
+		"X-Frame-Options":        "SAMEORIGIN",
+		"Referrer-Policy":        "no-referrer",
+	} {
+		if got := rec.Header().Get(k); got != want {
+			t.Errorf("%s = %q, want %q", k, got, want)
+		}
 	}
 }

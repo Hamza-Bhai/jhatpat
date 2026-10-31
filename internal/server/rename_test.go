@@ -6,14 +6,14 @@ func TestDeviceCanRenameItself(t *testing.T) {
 	s := newTestServer(t)
 	h := hostOf(t, s)
 	p, id := joinApproved(t, s, h, "192.168.1.20:1", "Android Phone")
-	if rec := p.do("POST", "/api/dev/rename", map[string]string{"name": "  Ali ka Phone  "}); rec.Code != 200 {
+	if rec := p.do("POST", "/api/dev/rename", map[string]string{"name": "  Alex's Phone  "}); rec.Code != 200 {
 		t.Fatalf("rename %d %s", rec.Code, rec.Body)
 	}
-	if me := decode[map[string]string](t, p.do("GET", "/api/dev/me", nil)); me["name"] != "Ali ka Phone" {
+	if me := decode[map[string]string](t, p.do("GET", "/api/dev/me", nil)); me["name"] != "Alex's Phone" {
 		t.Fatalf("me %v", me)
 	}
 	d, _ := s.devices.Get(id)
-	if n, _ := s.groups.KnownName(d.PersistentID); n != "Ali ka Phone" {
+	if n, _ := s.groups.KnownName(d.PersistentID); n != "Alex's Phone" {
 		t.Fatalf("remembered %q", n)
 	}
 	if rec := p.do("POST", "/api/dev/rename", map[string]string{"name": "   "}); rec.Code != 400 {
@@ -34,7 +34,7 @@ func TestRejoinKeepsRememberedName(t *testing.T) {
 	s := newTestServer(t)
 	h := hostOf(t, s)
 	p, _ := joinApproved(t, s, h, "192.168.1.20:1", "Android Phone")
-	p.do("POST", "/api/dev/rename", map[string]string{"name": "Ali ka Phone"})
+	p.do("POST", "/api/dev/rename", map[string]string{"name": "Alex's Phone"})
 
 	// JhatPat restarts; the phone joins again with the page's default guess.
 	s2, err := New(s.cfg)
@@ -45,15 +45,15 @@ func TestRejoinKeepsRememberedName(t *testing.T) {
 	ua := "Mozilla/5.0 (Linux; Android 14)"
 	rec := p.do("POST", "/api/join", map[string]string{"pin": s2.join.PIN(), "name": "Android Phone"}, "User-Agent", ua)
 	id := decode[map[string]string](t, rec)["id"]
-	if d, _ := s2.devices.Get(id); d.Name != "Ali ka Phone" {
+	if d, _ := s2.devices.Get(id); d.Name != "Alex's Phone" {
 		t.Fatalf("name %q", d.Name)
 	}
 	// A name the user actually typed wins over the remembered one.
 	p2 := s2.testClient(t, "192.168.1.20:1")
 	p2.cookies["jp_pid"] = p.cookies["jp_pid"]
-	rec = p2.do("POST", "/api/join", map[string]string{"pin": s2.join.PIN(), "name": "Ammi"}, "User-Agent", ua)
+	rec = p2.do("POST", "/api/join", map[string]string{"pin": s2.join.PIN(), "name": "Mom"}, "User-Agent", ua)
 	id = decode[map[string]string](t, rec)["id"]
-	if d, _ := s2.devices.Get(id); d.Name != "Ammi" {
+	if d, _ := s2.devices.Get(id); d.Name != "Mom" {
 		t.Fatalf("typed name lost: %q", d.Name)
 	}
 }

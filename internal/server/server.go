@@ -15,12 +15,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"jhatpat/internal/auth"
-	"jhatpat/internal/events"
-	"jhatpat/internal/groups"
-	"jhatpat/internal/items"
-	"jhatpat/internal/netdoctor"
-	"jhatpat/internal/transfer"
+	"github.com/Hamza-Bhai/jhatpat/internal/auth"
+	"github.com/Hamza-Bhai/jhatpat/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/internal/groups"
+	"github.com/Hamza-Bhai/jhatpat/internal/items"
+	"github.com/Hamza-Bhai/jhatpat/internal/netdoctor"
+	"github.com/Hamza-Bhai/jhatpat/internal/transfer"
 )
 
 // MaxText is the largest text item accepted.
@@ -44,6 +44,8 @@ type Config struct {
 	OpenPath func(path string) error
 	// Doctor runs network checks. Nil disables the doctor endpoints.
 	Doctor DoctorRunner
+	// Quit stops the app (used when there is no terminal to press Ctrl+C in). Nil disables it.
+	Quit func()
 }
 
 // DoctorRunner is what the host page needs from the Network Doctor.
@@ -104,7 +106,19 @@ func New(cfg Config) (*Server, error) {
 }
 
 // Handler returns the root HTTP handler.
-func (s *Server) Handler() http.Handler { return s.mux }
+func (s *Server) Handler() http.Handler { return securityHeaders(s.mux) }
+
+// securityHeaders adds defensive headers to every response. Pages are only
+// ever framed by JhatPat itself (the text viewer), never by another site.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "SAMEORIGIN")
+		h.Set("Referrer-Policy", "no-referrer")
+		next.ServeHTTP(w, r)
+	})
+}
 
 // HostToken is the secret the host page URL carries.
 func (s *Server) HostToken() string { return s.hostToken }
