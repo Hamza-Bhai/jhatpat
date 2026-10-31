@@ -19,7 +19,7 @@ go test ./...
 go run ./cmd/jhatpat
 ```
 
-The repository has two parts: `web/` (the Go server and web UI, described above) and `JhatPat-app/` (the Android app, in development). Run Go commands from inside `web/`.
+The repository has two parts: `web/` (the Go server and web UI, described above) and `JhatPat-app/` (the Android app, which bundles that server). Run Go commands from inside `web/`. To work on the app, see [JhatPat-app/README.md](JhatPat-app/README.md); it needs JDK 17, the Android SDK and Go.
 
 On Windows, `web\build-windows.bat` builds `web\dist\jhatpat.exe` without a terminal window.
 
@@ -28,7 +28,7 @@ On Windows, `web\build-windows.bat` builds `web\dist\jhatpat.exe` without a term
 1. Create a branch from `main`.
 2. Keep the change focused. One topic per pull request.
 3. Add or update tests for behavior changes.
-4. Run `gofmt -l .`, `go vet ./...` and `go test ./...` from `web/`. CI runs them on Windows, Linux and macOS.
+4. Run `gofmt -l .`, `go vet ./...` and `go test ./...` from `web/` (and `./gradlew testDebugUnitTest` from `JhatPat-app/` if you changed the app). CI runs them on Windows, Linux and macOS.
 5. Update `CHANGELOG.md` under **Unreleased** for user-visible changes.
 6. Use clear commit messages. [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`) are appreciated.
 

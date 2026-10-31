@@ -20,23 +20,23 @@ body:
     id: version
     attributes:
       label: JhatPat version
-      description: Output of `jhatpat -version`
+      description: "Laptop: output of `jhatpat -version`. Android app: the version shown in Settings → Apps → JhatPat."
     validations:
       required: true
   - type: dropdown
     id: os
     attributes:
-      label: Laptop operating system
-      options: [Windows, macOS, Linux]
+      label: Which host are you using?
+      options: ["Laptop: Windows", "Laptop: macOS", "Laptop: Linux", "Android app"]
     validations:
       required: true
   - type: input
     id: phone
     attributes:
-      label: Phone and browser
+      label: Phone and browser (or the host phone, for the Android app)
       placeholder: "Pixel 8, Chrome 130"
   - type: textarea
     id: doctor
     attributes:
       label: Network Doctor result
-      description: If the problem is connecting, click the status pill at the top of the laptop page and paste what it says.
+      description: If the problem is connecting on a laptop, click the status pill at the top of the page and paste what it says. Not available in the Android app.
