@@ -44,6 +44,7 @@
         <!-- "Share to JhatPat" from other apps -->
         <activity
             android:name=".share.ShareReceiverActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
             android:excludeFromRecents="true"
             android:exported="true"
             android:label="JhatPat"

@@ -242,4 +242,24 @@ class HostApiTest {
         val api = start { Response(403, """{"error":"host only"}""") }
         assertFalse(api.disableApk())
     }
+
+    @Test
+    fun transfersAreTheUploadsInProgress() {
+        val api = start {
+            Response(200, """{"transfers":[{"name":"clip.mp4","from":"Ali","size":100,"received":40},{"name":"b.bin","from":"Sara","size":8,"received":0}]}""")
+        }
+        assertEquals(
+            listOf(HostApi.Transfer("clip.mp4", "Ali", 100, 40), HostApi.Transfer("b.bin", "Sara", 8, 0)),
+            api.transfers(),
+        )
+        assertEquals("/api/host/transfers", seen.single().target)
+    }
+
+    @Test
+    fun transfersAreNullWhenTheServerRefusesOrIsUnreachable() {
+        val api = start { Response(403, """{"error":"host only"}""") }
+        assertEquals(null, api.transfers())
+        fake!!.close()
+        assertEquals(null, api.transfers())
+    }
 }

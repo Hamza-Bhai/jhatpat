@@ -18,6 +18,13 @@ object NotificationText {
     }
 }
 
+/**
+ * The state the notification shows the moment a START command arrives. An already active session
+ * keeps its own notification, so a second START never replaces "3 connected" with "Starting…".
+ */
+fun foregroundStateFor(current: SharingState, requested: Mode): SharingState =
+    if (current is SharingState.Running || current is SharingState.Starting) current else SharingState.Starting(requested)
+
 /** What to tell the person when the hotspot cannot start. */
 object HotspotMessages {
     private const val FALLBACK = "Turn on your phone's Hotspot in Settings, then use your current network."

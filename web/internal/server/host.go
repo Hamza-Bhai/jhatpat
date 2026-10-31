@@ -82,6 +82,13 @@ func (s *Server) hostRoutes() {
 		writeJSON(w, http.StatusOK, map[string]string{"pin": s.join.PIN(), "joinURL": s.joinURL()})
 	}))
 
+	m.HandleFunc("GET /api/host/transfers", s.host(func(w http.ResponseWriter, r *http.Request) {
+		list := []map[string]any{}
+		for _, p := range s.uploads.Active() {
+			list = append(list, map[string]any{"name": p.Name, "from": s.nameOf(p.Owner), "size": p.Size, "received": p.Received})
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"transfers": list})
+	}))
 	m.HandleFunc("POST /api/host/ip", s.host(func(w http.ResponseWriter, r *http.Request) {
 		var req struct{ IP string }
 		if !readJSON(w, r, 1024, &req) {

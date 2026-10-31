@@ -16,7 +16,12 @@ class SharingStateMachineTest {
     private val info = StartupInfo(8787, "tok", "1234", "sec", "192.168.1.5", "http://localhost:8787/host?t=tok")
     private val started = HotspotResult.Started("AndroidShare_1", "pw", "192.168.43.1")
 
-    private class FakeServer(val info: StartupInfo, var failWith: ServerStartException? = null, var gate: CompletableDeferred<Unit>? = null) : ServerRunner {
+    private class FakeServer(
+        val info: StartupInfo,
+        var failWith: ServerStartException? = null,
+        var gate: CompletableDeferred<Unit>? = null,
+        var crash: RuntimeException? = null,
+    ) : ServerRunner {
         var startedWithIp: String? = null
         var starts = 0
         var stops = 0
@@ -24,6 +29,7 @@ class SharingStateMachineTest {
             starts++
             gate?.await()
             failWith?.let { throw it }
+            crash?.let { throw it }
             startedWithIp = ip
             return info.copy(ip = ip)
         }
@@ -91,6 +97,18 @@ class SharingStateMachineTest {
         assertEquals(SharingState.Error("port busy", null), r.state)
         assertEquals(1, r.hotspot.stops)
         assertEquals(0, r.locks.acquires)
+    }
+
+    @Test
+    fun anUnexpectedFailureWhileStartingGoesToErrorInsteadOfHanging() = runBlocking {
+        val r = rig(server = FakeServer(info, crash = IllegalStateException("boom")))
+        r.machine.start(Mode.Hotspot)
+        val s = r.state as SharingState.Error
+        assertTrue(s.message, s.message.contains("boom"))
+        assertEquals(1, r.hotspot.stops)
+        assertEquals(0, r.locks.acquires)
+        r.machine.start(Mode.Wifi) // and it can be tried again
+        assertTrue(r.state is SharingState.Error)
     }
 
     @Test

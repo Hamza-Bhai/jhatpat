@@ -52,6 +52,9 @@ class SharingStateMachine(
         } catch (e: CancellationException) {
             stop()
             throw e
+        } catch (e: Exception) {
+            // Anything unexpected must end in a message, not in a screen that says "Starting" forever.
+            fail("JhatPat could not start: ${e.message ?: e::class.java.simpleName}")
         }
     }
 

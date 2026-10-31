@@ -40,4 +40,18 @@ class NotificationTextTest {
         assertTrue(HotspotMessages.forReason(Reason.LocationOff).contains("Location"))
         assertTrue(HotspotMessages.forReason(Reason.NoPermission).contains("permission"))
     }
+
+    @Test
+    fun aStartCommandKeepsTheNotificationOfAnActiveSession() {
+        val active = running(2, 1)
+        assertEquals(active, foregroundStateFor(active, Mode.Hotspot))
+        val starting = SharingState.Starting(Mode.Wifi)
+        assertEquals(starting, foregroundStateFor(starting, Mode.Hotspot))
+    }
+
+    @Test
+    fun aStartCommandOnAnIdleOrFailedServiceShowsStarting() {
+        assertEquals(SharingState.Starting(Mode.Hotspot), foregroundStateFor(SharingState.Idle, Mode.Hotspot))
+        assertEquals(SharingState.Starting(Mode.Wifi), foregroundStateFor(SharingState.Error("old", null), Mode.Wifi))
+    }
 }

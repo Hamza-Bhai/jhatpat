@@ -58,6 +58,26 @@ class HostApi(private val base: String, private val token: String) : Uploader, I
         null
     }
 
+    /** An upload from another device that has not finished yet. */
+    data class Transfer(val name: String, val from: String, val size: Long, val received: Long)
+
+    /** The uploads other devices are sending right now. Null when the server cannot be reached. */
+    fun transfers(): List<Transfer>? = try {
+        val reply = request("GET", "/api/host/transfers", null, 0)
+        if (!reply.ok) {
+            null
+        } else {
+            ((Json.parse(reply.body) as? Map<*, *>)?.get("transfers") as? List<*> ?: emptyList<Any?>()).mapNotNull {
+                val t = it as? Map<*, *> ?: return@mapNotNull null
+                Transfer(t["name"] as? String ?: return@mapNotNull null, t["from"] as? String ?: "", t["size"] as? Long ?: 0L, t["received"] as? Long ?: 0L)
+            }
+        }
+    } catch (_: IOException) {
+        null
+    } catch (_: IllegalArgumentException) {
+        null
+    }
+
     fun enableApk(minutes: Int): Boolean = post("/api/host/apk/enable", """{"minutes":$minutes}""")
 
     /** Switches `/app.apk` off again. */

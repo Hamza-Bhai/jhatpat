@@ -48,6 +48,10 @@ class SharingService : Service() {
     private val failures = AtomicInteger()
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
+    /** The progress bar currently on the notification (null when nothing is being received). */
+    @Volatile
+    private var progress: TransferProgress.Summary? = null
+
     override fun onCreate() {
         super.onCreate()
         Notifications.ensureChannel(this)
@@ -71,7 +75,7 @@ class SharingService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 val mode = runCatching { Mode.valueOf(intent.getStringExtra(EXTRA_MODE).orEmpty()) }.getOrDefault(Mode.Wifi)
-                promoteToForeground(SharingState.Starting(mode))
+                promoteToForeground(foregroundStateFor(SharingController.state.value, mode))
                 scope.launch { machine.start(mode) }
             }
             ACTION_STOP -> shutDown(startId)
@@ -101,7 +105,7 @@ class SharingService : Service() {
     private fun onState(state: SharingState) {
         when (state) {
             is SharingState.Running -> {
-                NotificationManagerCompat.from(this).notifySafely(Notifications.ID, Notifications.build(this, state))
+                NotificationManagerCompat.from(this).notifySafely(Notifications.ID, Notifications.build(this, state, progress))
                 if (watcher == null) startWatching(state)
             }
             is SharingState.Starting -> promoteToForeground(state)
@@ -155,8 +159,22 @@ class SharingService : Service() {
                     delay(15_000)
                 }
             }
+            launch(Dispatchers.IO) {
+                // Uploads from other devices are not events until they finish, so ask for their progress.
+                while (isActive) {
+                    showProgress(TransferProgress.summarize(api.transfers().orEmpty()))
+                    delay(1_500)
+                }
+            }
         }
         if (running.mode == Mode.Wifi) watchWifiAddress(api)
+    }
+
+    private fun showProgress(summary: TransferProgress.Summary?) {
+        if (summary == progress) return
+        progress = summary
+        val running = SharingController.state.value as? SharingState.Running ?: return
+        NotificationManagerCompat.from(this).notifySafely(Notifications.ID, Notifications.build(this, running, summary))
     }
 
     private fun refresh(api: HostApi) {
@@ -186,6 +204,7 @@ class SharingService : Service() {
     private fun stopWatching() {
         watcher?.cancel()
         watcher = null
+        progress = null
         networkCallback?.let {
             runCatching { (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) }
         }

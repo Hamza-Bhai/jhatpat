@@ -36,7 +36,7 @@ object Notifications {
             .setGroup("save-failed-$counter")
             .build()
 
-    fun build(context: Context, state: SharingState): Notification {
+    fun build(context: Context, state: SharingState, progress: TransferProgress.Summary? = null): Notification {
         val open = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -55,6 +55,9 @@ object Notifications {
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        if (progress != null && state is SharingState.Running) {
+            builder.setContentText(progress.label).setSubText(NotificationText.body(state)).setProgress(100, progress.percent, false)
+        }
         if (active) {
             builder.addAction(0, "Open", open)
             builder.addAction(0, "Stop", stop)
