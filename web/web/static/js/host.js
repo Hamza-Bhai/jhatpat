@@ -7,6 +7,11 @@
   let browsePath = "";
   const selected = new Set();
   const scroller = JP.stickyScroll($("#chat"));
+  // Inside the Android app (WebView) the app provides window.JhatPatApp. Quitting, the
+  // received-folder button and the host's file browser are handled natively there.
+  const inApp = !!window.JhatPatApp;
+  if (inApp) document.documentElement.classList.add("in-app");
+  if (inApp) ["#quitBtn", "#openFolder", "#pickLaptop"].forEach((sel) => $(sel) && $(sel).classList.add("hidden"));
   JP.viewSource = () => ({ items: state.items.filter(inConversation).reverse(), base: "/api/host/items/" });
 
   // ---------- helpers ----------
@@ -130,6 +135,7 @@
     const s = await JP.api("/api/host/state");
     const qrChanged = s.joinURL !== state.joinURL;
     state = s;
+    if (s.doctor === false) ["#doctorPill", "#phoneTrouble"].forEach((sel) => $(sel) && $(sel).classList.add("hidden"));
     renderAll();
     if (force) renderChat(true);
     if (qrChanged) refreshQR();
@@ -155,6 +161,7 @@
     $("#fixFirewall").classList.toggle("hidden", !r.checks.some((c) => c.id === "firewall" && c.status === "fail"));
   }
   async function runDoctor(trouble) {
+    if (state.doctor === false) return null;
     const r = await act(() => JP.api("/api/host/doctor" + (trouble ? "?trouble=1" : "")));
     if (r) renderDoctor(r);
     return r;
@@ -296,6 +303,12 @@
 
   document.querySelectorAll("[data-theme-btn]").forEach((b) => (b.onclick = () => JP.theme.toggle()));
 
+  // "Open" on an item the Android app moved to the Gallery: the app opens it natively.
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-open-moved]");
+    if (b && window.JhatPatApp) window.JhatPatApp.open(b.dataset.openMoved);
+  });
+
   JP.sse("/api/host/events", {
     "device-request": (d) => { JP.toast(`📱 <b>${JP.esc(d.name)}</b> ${t("wants_connect")}`, 6000); load(); runDoctor(false); },
     devices: () => load(),
@@ -307,6 +320,5 @@
 
   JP.applyI18n();
   JP.theme.paint();
-  load(true).catch((e) => JP.toast("😟 " + JP.esc(e.message), 0));
-  runDoctor(false);
+  load(true).catch((e) => JP.toast("😟 " + JP.esc(e.message), 0)).then(() => runDoctor(false));
 })();

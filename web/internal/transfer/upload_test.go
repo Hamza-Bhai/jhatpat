@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -163,3 +164,61 @@ func TestAbortRemovesPart(t *testing.T) {
 }
 
 var _ = io.EOF
+
+func TestActiveListsUnfinishedUploadsWithProgress(t *testing.T) {
+	u := NewUploads(t.TempDir())
+	a, err := u.Start("d1", "movie.mp4", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := u.Start("d2", "notes.txt", 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := u.WriteChunk("d1", a, 0, strings.NewReader("abcd")); err != nil {
+		t.Fatal(err)
+	}
+	got := u.Active()
+	if len(got) != 2 {
+		t.Fatalf("active = %+v", got)
+	}
+	byName := map[string]Progress{}
+	for _, p := range got {
+		byName[p.Name] = p
+	}
+	if p := byName["movie.mp4"]; p.Owner != "d1" || p.Size != 10 || p.Received != 4 {
+		t.Fatalf("movie.mp4 = %+v", p)
+	}
+	if p := byName["notes.txt"]; p.Owner != "d2" || p.Size != 4 || p.Received != 0 {
+		t.Fatalf("notes.txt = %+v", p)
+	}
+	// finished and aborted uploads leave the list
+	if err := u.Abort("d2", b); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := u.WriteChunk("d1", a, 4, strings.NewReader("efghij")); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := u.Finish("d1", a); err != nil {
+		t.Fatal(err)
+	}
+	if left := u.Active(); len(left) != 0 {
+		t.Fatalf("still active: %+v", left)
+	}
+}
+
+func TestActiveIsSortedForStableOutput(t *testing.T) {
+	u := NewUploads(t.TempDir())
+	for _, n := range []string{"c.bin", "a.bin", "b.bin"} {
+		if _, err := u.Start("d", n, 1); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var names []string
+	for _, p := range u.Active() {
+		names = append(names, p.Name)
+	}
+	if strings.Join(names, ",") != "a.bin,b.bin,c.bin" {
+		t.Fatalf("order = %v", names)
+	}
+}

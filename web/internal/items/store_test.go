@@ -64,3 +64,18 @@ func TestGetReturnsAnyItem(t *testing.T) {
 		t.Fatal("bogus found")
 	}
 }
+
+func TestMarkMoved(t *testing.T) {
+	s := NewStore()
+	it := s.Add(Item{Kind: File, Name: "a.jpg", Path: "/data/recv/a.jpg", From: "d1", To: []string{Host}})
+	if !s.MarkMoved(it.ID, "Gallery") {
+		t.Fatal("MarkMoved returned false for an existing item")
+	}
+	got, _ := s.Get(it.ID)
+	if !got.Moved || got.MovedTo != "Gallery" || got.Path != "" {
+		t.Fatalf("after MarkMoved: %+v", got)
+	}
+	if s.MarkMoved("nope", "Gallery") {
+		t.Fatal("MarkMoved returned true for an unknown item")
+	}
+}

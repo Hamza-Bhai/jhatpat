@@ -35,6 +35,10 @@ type Item struct {
 	To        []string  `json:"to"`
 	SHA256    string    `json:"sha256,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
+	// Moved is set when the host's app moved the file out of JhatPat's folder
+	// (for example into the Android Gallery); MovedTo says where, for display.
+	Moved   bool   `json:"moved"`
+	MovedTo string `json:"movedTo,omitempty"`
 }
 
 // Store holds items in memory for the current run.
@@ -100,6 +104,20 @@ func (s *Store) Get(id string) (Item, bool) {
 	defer s.mu.Unlock()
 	it, ok := s.items[id]
 	return it, ok
+}
+
+// MarkMoved records that the item's file now lives elsewhere. The old path is
+// forgotten. It reports false for an unknown item.
+func (s *Store) MarkMoved(id, where string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	it, ok := s.items[id]
+	if !ok {
+		return false
+	}
+	it.Moved, it.MovedTo, it.Path = true, where, ""
+	s.items[id] = it
+	return true
 }
 
 // Remove deletes an item.

@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 
 	"github.com/Hamza-Bhai/jhatpat/web/internal/auth"
@@ -79,6 +80,38 @@ func (u *Uploads) get(owner, id string) (*session, error) {
 		return nil, ErrNotFound
 	}
 	return s, nil
+}
+
+// Progress describes one unfinished upload.
+type Progress struct {
+	ID       string
+	Owner    string
+	Name     string
+	Size     int64
+	Received int64
+}
+
+// Active lists the uploads that have started and not finished or been aborted, sorted by name.
+func (u *Uploads) Active() []Progress {
+	u.mu.Lock()
+	sessions := make(map[string]*session, len(u.sessions))
+	for id, s := range u.sessions {
+		sessions[id] = s
+	}
+	u.mu.Unlock()
+	out := make([]Progress, 0, len(sessions))
+	for id, s := range sessions {
+		s.mu.Lock()
+		out = append(out, Progress{ID: id, Owner: s.owner, Name: filepath.Base(s.finalPath), Size: s.size, Received: s.received})
+		s.mu.Unlock()
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Name != out[j].Name {
+			return out[i].Name < out[j].Name
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out
 }
 
 // Offset returns how many bytes have been received so far.

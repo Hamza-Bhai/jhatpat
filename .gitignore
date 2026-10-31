@@ -3,9 +3,9 @@
 .superpowers/
 docs/superpowers/
 
-# Android app (app/)
-/app/build/
-/app/*/build/
+# Android app (JhatPat-app/)
+/JhatPat-app/build/
+/JhatPat-app/*/build/
 .gradle/
 local.properties
 *.jks
@@ -16,3 +16,6 @@ captures/
 # Copied in by goreleaser before packaging
 /web/README.md
 /web/LICENSE
+
+# The Go server is built into here by the buildGoServer Gradle task
+/JhatPat-app/app/src/main/jniLibs/

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -91,7 +92,7 @@ func (s *Server) addItem(it items.Item) items.Item {
 
 func (s *Server) nameOf(id string) string {
 	if id == items.Host {
-		return "Laptop"
+		return s.cfg.HostName
 	}
 	if d, ok := s.devices.Get(id); ok {
 		return d.Name
@@ -108,7 +109,7 @@ func (s *Server) view(it items.Item) map[string]any {
 	return map[string]any{
 		"id": it.ID, "kind": it.Kind, "name": it.Name, "size": it.Size, "text": it.Text,
 		"from": it.From, "fromName": s.nameOf(it.From), "to": it.To, "toNames": names,
-		"sha256": it.SHA256, "createdAt": it.CreatedAt,
+		"sha256": it.SHA256, "createdAt": it.CreatedAt, "moved": it.Moved, "movedTo": it.MovedTo,
 	}
 }
 
@@ -155,6 +156,10 @@ func (s *Server) serveVisible(w http.ResponseWriter, r *http.Request, viewer str
 // serveItem streams an item. inline=true previews safe types in the browser.
 func (s *Server) serveItem(w http.ResponseWriter, r *http.Request, it items.Item, inline bool) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if it.Moved {
+		writeErr(w, http.StatusGone, "moved")
+		return
+	}
 	switch it.Kind {
 	case items.Text:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -287,6 +292,12 @@ func (s *Server) uploadRoutes(prefix string, u *transfer.Uploads, wrap func(owne
 			size = info.Size()
 		}
 		it := s.addItem(items.Item{Kind: items.File, Name: filepath.Base(path), Path: path, Size: size, SHA256: sum, From: owner, To: to})
+		if owner != items.Host && slices.Contains(to, items.Host) {
+			// Host-only (SSE): lets the Android app move the file into the Gallery.
+			s.hub.Send(items.Host, events.Event{Type: "received", Data: map[string]any{
+				"id": it.ID, "name": it.Name, "size": it.Size, "path": path,
+			}})
+		}
 		writeJSON(w, http.StatusOK, s.view(it))
 	}))
 	m.HandleFunc("DELETE "+prefix+"/{id}", wrap(func(w http.ResponseWriter, r *http.Request, owner string) {

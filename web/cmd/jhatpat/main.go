@@ -14,12 +14,12 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"sync/atomic"
 	"time"
 
 	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/Hamza-Bhai/jhatpat/web/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/launch"
 	"github.com/Hamza-Bhai/jhatpat/web/internal/netdoctor"
 	"github.com/Hamza-Bhai/jhatpat/web/internal/server"
 	"github.com/Hamza-Bhai/jhatpat/web/web"
@@ -40,6 +40,13 @@ func main() {
 	dir := flag.String("dir", filepath.Join(home, "Downloads", "JhatPat"), "folder for received files")
 	noBrowser := flag.Bool("no-browser", false, "do not open the host page automatically")
 	preferIP := flag.String("ip", "", "network address to put in the QR code (default: best WiFi address)")
+	configDir := flag.String("config-dir", "", "folder for JhatPat's own state (default: the user config folder)")
+	jsonStartup := flag.Bool("json-startup", false, "print one JSON line with the port, tokens and PIN instead of the banner")
+	exitOnStdinClose := flag.Bool("exit-on-stdin-close", false, "exit when standard input is closed (for a parent process)")
+	noDoctor := flag.Bool("no-doctor", false, "turn the Network Doctor off (used on Android)")
+	hostName := flag.String("host-name", "", "how other devices see this host (default \"Laptop\")")
+	hostKind := flag.String("host-kind", "laptop", "laptop or phone: picks the icon other devices show")
+	apkPath := flag.String("apk", "", "path of this app's own APK, for the host to share (Android)")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 	if *showVersion {
@@ -55,40 +62,46 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
+	if *exitOnStdinClose {
+		go launch.ExitWhenClosed(os.Stdin, stop)
+	}
 
-	doctor := netdoctor.New(actualPort, *preferIP)
+	cfgDir := *configDir
+	if cfgDir == "" {
+		cfgDir = filepath.Join(cfgRoot, "JhatPat")
+	}
+
+	var doctorRunner server.DoctorRunner
+	var doctor *netdoctor.Doctor
+	if !*noDoctor {
+		doctor = netdoctor.New(actualPort, *preferIP)
+		doctorRunner = doctor
+	}
 	srv, err := server.New(server.Config{
 		Port:      actualPort,
 		SaveDir:   *dir,
-		ConfigDir: filepath.Join(cfgRoot, "JhatPat"),
+		ConfigDir: cfgDir,
+		APKPath:   *apkPath,
 		Web:       web.FS,
 		OpenPath:  openPath,
-		Doctor:    doctor,
+		Doctor:    doctorRunner,
+		HostName:  *hostName,
+		HostKind:  *hostKind,
 		Quit:      stop, // "Quit" button on the host page (no terminal when double-clicked)
 	})
 	if err != nil {
 		fatal("JhatPat could not start: %v", err)
 	}
 
-	var ip atomic.Value
-	ip.Store("")
-	if adapters, err := netdoctor.ListAdapters(); err == nil {
-		for _, a := range adapters {
-			if *preferIP == "" || a.IP == *preferIP {
-				ip.Store(a.IP)
-				break
-			}
-		}
+	if *preferIP != "" {
+		srv.SetIP(*preferIP)
+	} else if adapters, err := netdoctor.ListAdapters(); err == nil && len(adapters) > 0 {
+		srv.SetIP(adapters[0].IP)
 	}
-	srv.SetJoinURL(func() string {
-		cur := ip.Load().(string)
-		if cur == "" {
-			return ""
-		}
-		return fmt.Sprintf("http://%s:%d/j/%s", cur, actualPort, srv.Join().Secret())
-	})
 
-	go watchNetwork(ctx, doctor, srv, &ip)
+	if doctor != nil {
+		go watchNetwork(ctx, doctor, srv)
+	}
 
 	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 15 * time.Second}
 	go func() {
@@ -98,7 +111,17 @@ func main() {
 	}()
 
 	hostURL := fmt.Sprintf("http://localhost:%d/host?t=%s", actualPort, srv.HostToken())
-	printBanner(srv, ip.Load().(string), actualPort, hostURL, *dir)
+	if *jsonStartup {
+		err := launch.WriteStartup(os.Stdout, launch.StartupInfo{
+			Port: actualPort, HostToken: srv.HostToken(), PIN: srv.Join().PIN(),
+			Secret: srv.Join().Secret(), IP: srv.IP(), HostURL: hostURL,
+		})
+		if err != nil {
+			fatal("JhatPat could not report its address: %v", err)
+		}
+	} else {
+		printBanner(srv, srv.IP(), actualPort, hostURL, *dir)
+	}
 	if !*noBrowser {
 		_ = openURL(hostURL)
 	}
@@ -134,14 +157,13 @@ func listen(start int) (net.Listener, error) {
 
 // watchNetwork re-runs the doctor every 30s, tells the host page, and
 // switches the QR address when the laptop's IP changes.
-func watchNetwork(ctx context.Context, d *netdoctor.Doctor, srv *server.Server, ip *atomic.Value) {
+func watchNetwork(ctx context.Context, d *netdoctor.Doctor, srv *server.Server) {
 	tick := time.NewTicker(30 * time.Second)
 	defer tick.Stop()
 	for {
 		r := d.Run(ctx, netdoctor.Options{PhoneSeen: srv.PhoneSeen()})
-		if r.IP != "" && r.IP != ip.Load().(string) {
-			ip.Store(r.IP)
-			srv.Hub().Send("host", events.Event{Type: "pin", Data: map[string]string{"ip": r.IP}})
+		if r.IP != "" && r.IP != srv.IP() {
+			srv.SetIP(r.IP)
 		}
 		srv.Hub().Send("host", events.Event{Type: "doctor", Data: r})
 		select {

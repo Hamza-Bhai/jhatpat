@@ -2,15 +2,18 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -42,6 +45,12 @@ type Config struct {
 	Web fs.FS
 	// OpenPath opens a folder in the OS file manager. Nil disables it.
 	OpenPath func(path string) error
+	// HostName is how other devices see the host ("Laptop" by default).
+	HostName string
+	// HostKind is "laptop" (default) or "phone"; it picks the icon.
+	HostKind string
+	// APKPath is this app's own installed APK, shared on request (Android only).
+	APKPath string
 	// Doctor runs network checks. Nil disables the doctor endpoints.
 	Doctor DoctorRunner
 	// Quit stops the app (used when there is no terminal to press Ctrl+C in). Nil disables it.
@@ -67,6 +76,9 @@ type Server struct {
 	uploads    *transfer.Uploads // phone → laptop, saved in SaveDir
 	outbox     *transfer.Uploads // host drag-and-drop staging
 	joinURL    func() string
+	ip         atomic.Value // string: the address put in the QR code and join link
+	apkUntil   atomic.Int64 // unix nanoseconds until which /app.apk is served; 0 = off
+	now        func() time.Time
 	uploadMeta sync.Map    // upload id → uploadMeta
 	phoneSeen  atomic.Bool // a non-loopback device joined this run
 }
@@ -75,6 +87,10 @@ type Server struct {
 func New(cfg Config) (*Server, error) {
 	if cfg.SaveDir == "" || cfg.ConfigDir == "" {
 		return nil, errors.New("SaveDir and ConfigDir are required")
+	}
+	cfg.HostName = cleanHostName(cfg.HostName)
+	if cfg.HostKind != "phone" {
+		cfg.HostKind = "laptop"
 	}
 	if err := os.MkdirAll(cfg.SaveDir, 0o755); err != nil {
 		return nil, err
@@ -100,8 +116,11 @@ func New(cfg Config) (*Server, error) {
 		uploads:   transfer.NewUploads(cfg.SaveDir),
 		outbox:    transfer.NewUploads(outboxDir),
 	}
-	s.joinURL = func() string { return "" }
+	s.ip.Store("")
+	s.now = time.Now
+	s.joinURL = s.defaultJoinURL
 	s.routes()
+	s.apkRoutes()
 	return s, nil
 }
 
@@ -126,8 +145,27 @@ func (s *Server) HostToken() string { return s.hostToken }
 // Join exposes the PIN/secret holder (for the startup banner).
 func (s *Server) Join() *auth.Join { return s.join }
 
-// SetJoinURL sets how the server builds the QR join link (it depends on the chosen IP).
+// SetJoinURL overrides how the server builds the QR join link. By default it
+// is built from IP() and the port.
 func (s *Server) SetJoinURL(f func() string) { s.joinURL = f }
+
+// IP returns the address advertised in the join link ("" when unknown).
+func (s *Server) IP() string { return s.ip.Load().(string) }
+
+// SetIP changes the advertised address and tells the host page. It does not
+// validate: callers are the trusted startup code and the validated HTTP route.
+func (s *Server) SetIP(ip string) {
+	s.ip.Store(ip)
+	s.hub.Send(items.Host, events.Event{Type: "pin", Data: map[string]string{"ip": ip}})
+}
+
+func (s *Server) defaultJoinURL() string {
+	ip := s.IP()
+	if ip == "" {
+		return ""
+	}
+	return fmt.Sprintf("http://%s:%d/j/%s", ip, s.cfg.Port, s.join.Secret())
+}
 
 // Hub exposes the event hub (Network Doctor publishes through it).
 func (s *Server) Hub() *events.Hub { return s.hub }
@@ -237,6 +275,26 @@ func cookie(r *http.Request, name string) string {
 	return c.Value
 }
 
+// cleanHostName trims the name, caps its length and falls back to "Laptop".
+func cleanHostName(name string) string {
+	name = strings.TrimSpace(name)
+	if r := []rune(name); len(r) > 40 {
+		name = string(r[:40])
+	}
+	if name == "" {
+		return "Laptop"
+	}
+	return name
+}
+
+// hostIdentityScript tells the page what the host is called, so labels like
+// "Laptop" read "Phone" on a phone host. json.Marshal escapes <, > and &, so
+// the name cannot close the script tag.
+func (s *Server) hostIdentityScript() []byte {
+	b, _ := json.Marshal(map[string]string{"name": s.cfg.HostName, "kind": s.cfg.HostKind})
+	return append(append([]byte("<script>window.JPHOST="), b...), "</script>"...)
+}
+
 // page serves one HTML page from Web, or a placeholder.
 func (s *Server) page(w http.ResponseWriter, name string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -249,6 +307,9 @@ func (s *Server) page(w http.ResponseWriter, name string) {
 	if err != nil {
 		http.Error(w, "missing page", http.StatusInternalServerError)
 		return
+	}
+	if i := bytes.Index(b, []byte("</head>")); i >= 0 {
+		b = append(append(append([]byte{}, b[:i]...), s.hostIdentityScript()...), b[i:]...)
 	}
 	_, _ = w.Write(b)
 }

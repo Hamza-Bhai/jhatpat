@@ -3,10 +3,12 @@ package server
 import (
 	"crypto/subtle"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	qrcode "github.com/skip2/go-qrcode"
 
@@ -64,7 +66,8 @@ func (s *Server) hostState() map[string]any {
 	return map[string]any{
 		"pin": s.join.PIN(), "joinURL": s.joinURL(), "saveDir": s.cfg.SaveDir,
 		"devices": devs, "groups": s.groups.List(), "known": known,
-		"items": s.views(s.items.All()),
+		"items": s.views(s.items.All()), "apk": s.apkState(),
+		"hostName": s.cfg.HostName, "hostKind": s.cfg.HostKind, "doctor": s.cfg.Doctor != nil,
 	}
 }
 
@@ -77,6 +80,27 @@ func (s *Server) hostRoutes() {
 		s.join.Regenerate()
 		s.hub.Send(items.Host, events.Event{Type: "pin", Data: map[string]string{"pin": s.join.PIN()}})
 		writeJSON(w, http.StatusOK, map[string]string{"pin": s.join.PIN(), "joinURL": s.joinURL()})
+	}))
+
+	m.HandleFunc("GET /api/host/transfers", s.host(func(w http.ResponseWriter, r *http.Request) {
+		list := []map[string]any{}
+		for _, p := range s.uploads.Active() {
+			list = append(list, map[string]any{"name": p.Name, "from": s.nameOf(p.Owner), "size": p.Size, "received": p.Received})
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"transfers": list})
+	}))
+	m.HandleFunc("POST /api/host/ip", s.host(func(w http.ResponseWriter, r *http.Request) {
+		var req struct{ IP string }
+		if !readJSON(w, r, 1024, &req) {
+			return
+		}
+		ip := net.ParseIP(req.IP)
+		if ip == nil || ip.To4() == nil || !ip.IsPrivate() || strings.ContainsAny(req.IP, "/:") {
+			writeErr(w, http.StatusBadRequest, "need a private IPv4 address")
+			return
+		}
+		s.SetIP(ip.String())
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	}))
 
 	deviceAction := func(act func(id string) error, after func(d *auth.Device)) http.HandlerFunc {
@@ -181,6 +205,27 @@ func (s *Server) hostRoutes() {
 		s.items.Remove(it.ID)
 		for _, a := range append([]string{it.From, items.Host}, it.To...) {
 			s.hub.Send(a, events.Event{Type: "item-removed", Data: map[string]string{"id": it.ID}})
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	}))
+	m.HandleFunc("POST /api/host/items/{id}/moved", s.host(func(w http.ResponseWriter, r *http.Request) {
+		var req struct{ Where string }
+		if !readJSON(w, r, 1024, &req) {
+			return
+		}
+		where := strings.TrimSpace(req.Where)
+		if where == "" || len(where) > 100 {
+			writeErr(w, http.StatusBadRequest, "where is required")
+			return
+		}
+		id := r.PathValue("id")
+		it, ok := s.items.Get(id)
+		if !ok || !s.items.MarkMoved(id, where) {
+			writeErr(w, http.StatusNotFound, "no item")
+			return
+		}
+		for _, a := range append([]string{it.From, items.Host}, it.To...) {
+			s.hub.Send(a, events.Event{Type: "item", Data: map[string]string{"id": id}})
 		}
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	}))

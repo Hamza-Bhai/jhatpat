@@ -19,7 +19,7 @@ go test ./...
 go run ./cmd/jhatpat
 ```
 
-The repository has two parts: `web/` (the Go server and web UI, described above) and `app/` (the Android app, in development). Run Go commands from inside `web/`.
+The repository has two parts: `web/` (the Go server and web UI, described above) and `JhatPat-app/` (the Android app, in development). Run Go commands from inside `web/`.
 
 On Windows, `web\build-windows.bat` builds `web\dist\jhatpat.exe` without a terminal window.
 
