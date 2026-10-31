@@ -182,4 +182,49 @@ class HostApiTest {
         fake!!.close()
         assertEquals(null, api.summary())
     }
+
+    @Test
+    fun sendTextPostsTheTextAndTarget() {
+        val api = start()
+        assertTrue(api.sendText("hello \"world\" 🎉", Target("device", "d1")).isSuccess)
+        val r = seen.single()
+        assertEquals("POST /api/host/send", "${r.method} ${r.target}")
+        assertEquals("hello \"world\" 🎉", json(r)["text"])
+        assertEquals("d1", (json(r)["to"] as Map<*, *>)["id"])
+        assertEquals("device", (json(r)["to"] as Map<*, *>)["kind"])
+    }
+
+    @Test
+    fun sendTextFailureCarriesTheServersMessage() {
+        val api = start { Response(400, """{"error":"no recipients are connected"}""") }
+        val result = api.sendText("hi", Target("all"))
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()!!.message!!.contains("no recipients are connected"))
+    }
+
+    @Test
+    fun recipientsAreEveryoneThenApprovedDevicesThenGroups() {
+        val api = start {
+            Response(
+                200,
+                """{"devices":[{"id":"d1","name":"Ali","state":"approved"},{"id":"d2","name":"Pending","state":"pending"},{"id":"d3","name":"Sara","state":"approved"}],""" +
+                    """"groups":[{"id":"g1","name":"Family"}]}""",
+            )
+        }
+        assertEquals(
+            listOf(
+                HostApi.Recipient(Target("all"), "Everyone"),
+                HostApi.Recipient(Target("device", "d1"), "Ali"),
+                HostApi.Recipient(Target("device", "d3"), "Sara"),
+                HostApi.Recipient(Target("group", "g1"), "Family"),
+            ),
+            api.recipients(),
+        )
+    }
+
+    @Test
+    fun recipientsAreNullWhenTheServerRefuses() {
+        val api = start { Response(403, """{"error":"host only"}""") }
+        assertEquals(null, api.recipients())
+    }
 }

@@ -10,11 +10,16 @@ import java.net.URLEncoder
 /** Who an upload is for: kind is "host", "device", "group" or "all" (see the server's Target). */
 data class Target(val kind: String, val id: String = "")
 
+/** Something that can send one file to a [Target]; [HostApi] is the real one. */
+interface Uploader {
+    fun upload(name: String, size: Long, to: Target, open: () -> InputStream): Result<Unit>
+}
+
 /**
  * The host API of the local JhatPat server, reached over loopback. Every request carries the
  * per-run host cookie.
  */
-class HostApi(private val base: String, private val token: String) {
+class HostApi(private val base: String, private val token: String) : Uploader {
     private class Reply(val code: Int, val body: String) {
         val ok get() = code in 200..299
 
@@ -59,7 +64,7 @@ class HostApi(private val base: String, private val token: String) {
      * Sends one file to [to] through the chunked, resumable upload API. [open] is called once to
      * read the data. A failed upload is aborted on the server (best effort).
      */
-    fun upload(name: String, size: Long, to: Target, open: () -> InputStream): Result<Unit> = runCatching {
+    override fun upload(name: String, size: Long, to: Target, open: () -> InputStream): Result<Unit> = runCatching {
         val initBody = """{"name":${Json.quote(name)},"size":$size,"to":{"kind":${Json.quote(to.kind)},"id":${Json.quote(to.id)}}}"""
         val initBytes = initBody.toByteArray()
         val init = request("POST", "/api/host/uploads", initBytes, initBytes.size)
@@ -87,6 +92,44 @@ class HostApi(private val base: String, private val token: String) {
             runCatching { request("DELETE", path, null, 0) }
             throw e
         }
+    }
+
+    /** Sends a text message (or link) to [to] as the host. */
+    fun sendText(text: String, to: Target): Result<Unit> = runCatching {
+        val body = """{"text":${Json.quote(text)},"to":{"kind":${Json.quote(to.kind)},"id":${Json.quote(to.id)}}}""".toByteArray()
+        val reply = request("POST", "/api/host/send", body, body.size)
+        if (!reply.ok) throw IOException(reply.errorMessage())
+    }
+
+    /** Someone the host can send to. */
+    data class Recipient(val target: Target, val label: String)
+
+    /** Everyone, then each approved device, then each group. Null when the server cannot be reached. */
+    fun recipients(): List<Recipient>? = try {
+        val reply = request("GET", "/api/host/state", null, 0)
+        if (!reply.ok) {
+            null
+        } else {
+            val state = Json.parse(reply.body) as? Map<*, *>
+            val out = mutableListOf(Recipient(Target("all"), "Everyone"))
+            for (d in state?.get("devices") as? List<*> ?: emptyList<Any?>()) {
+                val device = d as? Map<*, *> ?: continue
+                if (device["state"] == "approved") out += Recipient(Target("device", device["id"] as String), device["name"] as String)
+            }
+            for (g in state?.get("groups") as? List<*> ?: emptyList<Any?>()) {
+                val group = g as? Map<*, *> ?: continue
+                out += Recipient(Target("group", group["id"] as String), group["name"] as String)
+            }
+            out
+        }
+    } catch (_: IOException) {
+        null
+    } catch (_: IllegalArgumentException) {
+        null
+    } catch (_: ClassCastException) {
+        null
+    } catch (_: NullPointerException) {
+        null
     }
 
     /**
