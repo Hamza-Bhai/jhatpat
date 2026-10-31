@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-31
+
+First public release: PIN and QR joining with per-run approval, groups, resumable uploads, folder transfer, and the Network Doctor.
+
 ### Added
 - Chat-style interface on the laptop and phone pages, with WhatsApp-style previews and a full-screen viewer.
 - Phones can rename themselves.
@@ -17,7 +21,3 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - The interface is English only.
 - Network Doctor no longer reports a problem while a phone is still connecting.
 - A Public Windows network profile is only a warning when the firewall already allows JhatPat.
-
-## [0.1.0] - Unreleased
-
-First public version: PIN and QR joining with per-run approval, groups, resumable uploads, folder transfer, and the Network Doctor.
