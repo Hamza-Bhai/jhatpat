@@ -10,6 +10,7 @@
   // Inside the Android app (WebView) the app provides window.JhatPatApp. Quitting, the
   // received-folder button and the host's file browser are handled natively there.
   const inApp = !!window.JhatPatApp;
+  if (inApp) document.documentElement.classList.add("in-app");
   if (inApp) ["#quitBtn", "#openFolder", "#pickLaptop"].forEach((sel) => $(sel) && $(sel).classList.add("hidden"));
   JP.viewSource = () => ({ items: state.items.filter(inConversation).reverse(), base: "/api/host/items/" });
 

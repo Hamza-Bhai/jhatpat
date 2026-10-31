@@ -3,11 +3,12 @@ package io.github.hamzabhai.jhatpat
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Text
+import io.github.hamzabhai.jhatpat.ui.JhatPatApp
+import io.github.hamzabhai.jhatpat.ui.JhatPatTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { Text("JhatPat") }
+        setContent { JhatPatTheme { JhatPatApp() } }
     }
 }
