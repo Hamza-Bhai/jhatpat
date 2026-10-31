@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
-- The repository is now a monorepo: the Go server lives in `web/` (module `github.com/Hamza-Bhai/jhatpat/web`) and the Android app will live in `app/`.
+- The repository is now a monorepo: the Go server lives in `web/` (module `github.com/Hamza-Bhai/jhatpat/web`) and the Android app will live in `JhatPat-app/`.
 
 ## [0.1.1] - 2026-10-31
 

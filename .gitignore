@@ -3,9 +3,9 @@
 .superpowers/
 docs/superpowers/
 
-# Android app (app/)
-/app/build/
-/app/*/build/
+# Android app (JhatPat-app/)
+/JhatPat-app/build/
+/JhatPat-app/*/build/
 .gradle/
 local.properties
 *.jks

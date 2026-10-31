@@ -83,7 +83,7 @@ go build -o jhatpat ./cmd/jhatpat
 | Folder | What it is |
 |---|---|
 | [`web/`](web) | The JhatPat server and web interface (Go). Runs on Windows, macOS and Linux. |
-| `app/` | The Android app, so a phone can be the host (in development). |
+| [`JhatPat-app/`](JhatPat-app) | The Android app, so a phone can be the host (in development). |
 
 ## Contributing
 
