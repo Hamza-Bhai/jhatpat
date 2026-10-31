@@ -128,6 +128,7 @@ func (s *Server) hostRoutes() {
 	m.HandleFunc("POST /api/host/devices/{id}/block", deviceAction(s.devices.Block, func(d *auth.Device) {
 		s.hub.Send(d.ID, events.Event{Type: "kicked", Data: map[string]bool{"blocked": true}})
 	}))
+	m.HandleFunc("POST /api/host/devices/{id}/unblock", deviceAction(s.devices.Unblock, nil))
 	m.HandleFunc("POST /api/host/devices/{id}/kick", deviceAction(s.devices.Kick, func(d *auth.Device) {
 		s.hub.Send(d.ID, events.Event{Type: "kicked", Data: map[string]bool{"blocked": false}})
 	}))

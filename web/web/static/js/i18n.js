@@ -21,6 +21,8 @@
       no_devices: "No phones yet. Scan the QR!",
       approve: "✅ Allow",
       block: "⛔ Block",
+      unblock: "Unblock",
+      show_qr: "📷 Show QR",
       kick: "Remove",
       rename: "Rename",
       wants_connect: "wants to connect",

@@ -39,6 +39,39 @@ func TestBlockPreventsReRequest(t *testing.T) {
 	}
 }
 
+func TestUnblockLetsTheDeviceAskAgain(t *testing.T) {
+	r := NewRegistry()
+	d := r.Request("Phone", "pid1")
+	_ = r.Block(d.ID)
+	if err := r.Unblock(d.ID); err != nil {
+		t.Fatal(err)
+	}
+	if r.IsBlocked("pid1") {
+		t.Fatal("pid still blocked")
+	}
+	if _, ok := r.Get(d.ID); ok {
+		t.Fatal("unblocked device still listed")
+	}
+	if _, ok := r.ByToken(d.Token); ok {
+		t.Fatal("old token usable without a new approval")
+	}
+}
+
+func TestUnblockOnlyAppliesToBlockedDevices(t *testing.T) {
+	r := NewRegistry()
+	d := r.Request("Phone", "pid1")
+	_ = r.Approve(d.ID)
+	if err := r.Unblock(d.ID); err == nil {
+		t.Fatal("unblocking an approved device must fail")
+	}
+	if got, ok := r.Get(d.ID); !ok || got.State != Approved {
+		t.Fatal("approved device was changed")
+	}
+	if err := r.Unblock("nope"); err != ErrNoDevice {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestKickRevokesToken(t *testing.T) {
 	r := NewRegistry()
 	d := r.Request("Phone", "pid1")

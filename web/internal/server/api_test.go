@@ -163,6 +163,20 @@ func TestBlockedDeviceCannotRejoin(t *testing.T) {
 	}
 }
 
+func TestUnblockedDeviceCanJoinAgain(t *testing.T) {
+	s := newTestServer(t)
+	h := hostOf(t, s)
+	p := s.testClient(t, "192.168.1.20:4000")
+	id := decode[map[string]string](t, p.do("POST", "/api/join", map[string]string{"pin": s.join.PIN()}))["id"]
+	h.do("POST", "/api/host/devices/"+id+"/block", nil)
+	if rec := h.do("POST", "/api/host/devices/"+id+"/unblock", nil); rec.Code != 200 {
+		t.Fatalf("unblock got %d %s", rec.Code, rec.Body)
+	}
+	if rec := p.do("POST", "/api/join", map[string]string{"pin": s.join.PIN()}); rec.Code != 200 {
+		t.Fatalf("rejoin after unblock got %d", rec.Code)
+	}
+}
+
 func sendText(t *testing.T, h *client, text string, to map[string]string) string {
 	t.Helper()
 	rec := h.do("POST", "/api/host/send", map[string]any{"text": text, "to": to})
