@@ -81,7 +81,8 @@ JhatPat-app (Kotlin, Android)                 web/ (Go)
 ```
 
 - **The Go server runs as a child process.** It is built with
-  `GOOS=android CGO_ENABLED=0` for `arm64-v8a`, `armeabi-v7a` and `x86_64`,
+  `CGO_ENABLED=0` for `arm64-v8a` (`GOOS=android`) and for `armeabi-v7a` and `x86_64`
+  (static `GOOS=linux`, because `android/arm` and `android/amd64` need cgo and the NDK),
   packaged as `lib/<abi>/libjhatpat.so` and started from the native library
   directory (`android:extractNativeLibs="true"`), because Android forbids
   executing files from the app's data directory. No NDK and no gomobile.

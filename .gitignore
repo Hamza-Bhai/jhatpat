@@ -16,3 +16,6 @@ captures/
 # Copied in by goreleaser before packaging
 /web/README.md
 /web/LICENSE
+
+# The Go server is built into here by the buildGoServer Gradle task
+/JhatPat-app/app/src/main/jniLibs/

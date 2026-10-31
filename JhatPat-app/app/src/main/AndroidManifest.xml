@@ -24,6 +24,7 @@
         android:allowBackup="false"
         android:extractNativeLibs="true"
         android:label="JhatPat"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.JhatPat">
 

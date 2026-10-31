@@ -1,0 +1,164 @@
+package io.github.hamzabhai.jhatpat.server
+
+import io.github.hamzabhai.jhatpat.server.FakeHttpServer.Request
+import io.github.hamzabhai.jhatpat.server.FakeHttpServer.Response
+import io.github.hamzabhai.jhatpat.util.Json
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.util.concurrent.CopyOnWriteArrayList
+
+class HostApiTest {
+    private val seen = CopyOnWriteArrayList<Request>()
+    private var fake: FakeHttpServer? = null
+
+    private fun start(handler: (Request) -> Response = { Response(200, """{"ok":true}""") }): HostApi {
+        val server = FakeHttpServer { req ->
+            seen += req
+            handler(req)
+        }
+        fake = server
+        return HostApi("http://127.0.0.1:${server.port}", "TOKEN")
+    }
+
+    @After
+    fun stopServer() {
+        fake?.close()
+    }
+
+    private fun json(r: Request) = Json.parse(String(r.body)) as Map<*, *>
+
+    @Test
+    fun everyRequestCarriesTheHostCookie() {
+        val api = start()
+        api.enableApk(10)
+        api.setIp("192.168.43.1")
+        api.markMoved("abc", "Gallery")
+        assertEquals(3, seen.size)
+        assertTrue(seen.all { it.headers["cookie"] == "jp_host=TOKEN" })
+    }
+
+    @Test
+    fun enableApkPostsMinutes() {
+        val api = start()
+        assertTrue(api.enableApk(10))
+        val r = seen.single()
+        assertEquals("POST /api/host/apk/enable", "${r.method} ${r.target}")
+        assertEquals(10L, json(r)["minutes"])
+    }
+
+    @Test
+    fun setIpPostsTheAddress() {
+        val api = start()
+        assertTrue(api.setIp("192.168.43.1"))
+        assertEquals("/api/host/ip", seen.single().target)
+        assertEquals("192.168.43.1", json(seen.single())["ip"])
+    }
+
+    @Test
+    fun markMovedPostsWhere() {
+        val api = start()
+        assertTrue(api.markMoved("item1", "Gallery"))
+        assertEquals("/api/host/items/item1/moved", seen.single().target)
+        assertEquals("Gallery", json(seen.single())["where"])
+    }
+
+    @Test
+    fun refusedRequestsReturnFalse() {
+        val api = start { Response(403, """{"error":"host only"}""") }
+        assertFalse(api.enableApk(10))
+        assertFalse(api.setIp("192.168.43.1"))
+        assertFalse(api.markMoved("x", "Gallery"))
+    }
+
+    @Test
+    fun unreachableServerReturnsFalseInsteadOfThrowing() {
+        val api = start()
+        fake!!.close()
+        assertFalse(api.enableApk(10))
+    }
+
+    @Test
+    fun uploadsTwentyMiBInThreeChunksThenFinishes() {
+        val chunk = 8_388_608
+        val api = start { r ->
+            when {
+                r.method == "POST" && r.target == "/api/host/uploads" -> Response(200, """{"id":"u1","chunkSize":$chunk}""")
+                r.method == "PUT" -> Response(200, """{"offset":1}""")
+                else -> Response(200, """{"id":"item"}""")
+            }
+        }
+        val data = ByteArray(20 * 1024 * 1024) { (it % 251).toByte() }
+        val result = api.upload("clip.mp4", data.size.toLong(), Target("all")) { ByteArrayInputStream(data) }
+        assertTrue(result.exceptionOrNull()?.toString(), result.isSuccess)
+        val puts = seen.filter { it.method == "PUT" }
+        assertEquals(listOf("/api/host/uploads/u1?offset=0", "/api/host/uploads/u1?offset=$chunk", "/api/host/uploads/u1?offset=${2 * chunk}"), puts.map { it.target })
+        assertEquals(listOf(chunk, chunk, data.size - 2 * chunk), puts.map { it.body.size })
+        assertTrue(puts[0].body.contentEquals(data.copyOfRange(0, chunk)))
+        assertEquals("POST /api/host/uploads/u1/finish", seen.last().let { "${it.method} ${it.target}" })
+        val init = json(seen.first())
+        assertEquals("clip.mp4", init["name"])
+        assertEquals(data.size.toLong(), init["size"])
+        assertEquals("all", (init["to"] as Map<*, *>)["kind"])
+    }
+
+    @Test
+    fun emptyFileIsInitThenFinish() {
+        val api = start { r ->
+            if (r.target == "/api/host/uploads") Response(200, """{"id":"u2","chunkSize":8388608}""") else Response(200, "{}")
+        }
+        assertTrue(api.upload("empty.txt", 0, Target("device", "d1")) { ByteArrayInputStream(ByteArray(0)) }.isSuccess)
+        assertEquals(listOf("POST", "POST"), seen.map { it.method })
+        assertEquals("d1", (json(seen.first())["to"] as Map<*, *>)["id"])
+    }
+
+    @Test
+    fun trickyNamesSurviveJsonEncoding() {
+        val api = start { r ->
+            if (r.target == "/api/host/uploads") Response(200, """{"id":"u3","chunkSize":8388608}""") else Response(200, "{}")
+        }
+        val name = "🎉 \"shaadi\" \\ video.mp4"
+        api.upload(name, 1, Target("all")) { ByteArrayInputStream(byteArrayOf(1)) }
+        assertEquals(name, json(seen.first())["name"])
+    }
+
+    @Test
+    fun failedInitIsAFailureAndNothingElseIsSent() {
+        val api = start { Response(400, """{"error":"no recipients are connected"}""") }
+        val result = api.upload("a.bin", 3, Target("all")) { ByteArrayInputStream(ByteArray(3)) }
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()!!.message!!.contains("no recipients are connected"))
+        assertEquals(1, seen.size)
+    }
+
+    @Test
+    fun failedChunkAbortsTheUpload() {
+        val api = start { r ->
+            when {
+                r.target == "/api/host/uploads" -> Response(200, """{"id":"u4","chunkSize":2}""")
+                r.method == "PUT" -> Response(500, """{"error":"disk full"}""")
+                else -> Response(200, "{}")
+            }
+        }
+        val result = api.upload("a.bin", 4, Target("all")) { ByteArrayInputStream(ByteArray(4)) }
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()!!.message!!.contains("disk full"))
+        assertEquals("DELETE", seen.last().method) // best-effort abort
+    }
+
+    @Test
+    fun eventsDeliversEachEventAndIgnoresComments() {
+        val api = start {
+            val body = ": connected\n\nevent: received\ndata: {\"id\":\"a\"}\n\n: ping\n\nevent: item\ndata: {\"id\":\"b\"}\n\n"
+            Response(200, body, "text/event-stream")
+        }
+        val got = mutableListOf<Pair<String, String>>()
+        api.events { type, data -> got += type to data }
+        assertEquals(listOf("received" to """{"id":"a"}""", "item" to """{"id":"b"}"""), got)
+        assertEquals("/api/host/events", seen.single().target)
+        assertEquals("jp_host=TOKEN", seen.single().headers["cookie"])
+    }
+}
