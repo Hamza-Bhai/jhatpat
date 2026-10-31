@@ -163,10 +163,13 @@ must be on), `NEARBY_WIFI_DEVICES` with `neverForLocation` (Android 13+),
 
 ## 11. Known risks and how they are handled
 
-- **Hotspot while connected to WiFi.** Some phones refuse a local-only hotspot
+- **Hotspot while connected to WiFi.** Some phones may refuse a local-only hotspot
   while WiFi is on. The app detects the failure and shows a fallback: "Turn on
   your phone's Hotspot in Settings, then tap Continue" (opens the hotspot
-  settings). To be tested on the owner's TECNO phone first.
+  settings). **Verified on a TECNO KG8 (Android 11):** the hotspot starts while the
+  phone stays on WiFi (interfaces `ap0` 192.168.29.99 and `wlan0` 192.168.1.3); the
+  hotspot address is not always `.1`, so it is read from the interface. Android
+  only allows the start while the app is in the foreground (the Start button).
 - **Battery optimisation / OEM task killers** (TECNO, Xiaomi, etc.). The service
   is foreground with a wake lock only while sharing; a one-time prompt asks to
   exempt the app from battery optimisation.
