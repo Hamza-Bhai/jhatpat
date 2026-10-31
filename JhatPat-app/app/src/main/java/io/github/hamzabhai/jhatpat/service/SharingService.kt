@@ -12,6 +12,9 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
+import io.github.hamzabhai.jhatpat.gallery.AndroidMediaStoreGateway
+import io.github.hamzabhai.jhatpat.gallery.GallerySaver
+import io.github.hamzabhai.jhatpat.gallery.ReceivedWatcher
 import io.github.hamzabhai.jhatpat.net.HotspotController
 import io.github.hamzabhai.jhatpat.server.HostApi
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +27,8 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Owns the JhatPat server, the hotspot and the locks for as long as sharing is on. It is a
@@ -36,6 +41,11 @@ class SharingService : Service() {
     private lateinit var controller: HotspotController
     private lateinit var machine: SharingStateMachine
     private var watcher: Job? = null
+
+    // Copying a received file into the Gallery can take a while, so it runs here, one file at a time,
+    // instead of holding up the event stream.
+    private val saveWorker = Executors.newSingleThreadExecutor()
+    private val failures = AtomicInteger()
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     override fun onCreate() {
@@ -78,6 +88,7 @@ class SharingService : Service() {
     override fun onDestroy() {
         machine.stop()
         stopWatching()
+        saveWorker.shutdown() // lets a file that is being copied finish
         scope.cancel()
         super.onDestroy()
     }
@@ -119,10 +130,22 @@ class SharingService : Service() {
     /** While running: refresh the counts, and follow the WiFi address in WiFi mode. */
     private fun startWatching(running: SharingState.Running) {
         val api = HostApi("http://127.0.0.1:${running.info.port}", running.info.hostToken)
+        SharingController.savedUris.clear()
+        val received = ReceivedWatcher(
+            mover = api,
+            saver = GallerySaver(AndroidMediaStoreGateway(this)),
+            saved = SharingController.savedUris,
+            onSaveFailed = { name ->
+                NotificationManagerCompat.from(this).notifySafely(100 + failures.incrementAndGet(), Notifications.saveFailed(this, name, failures.get()))
+            },
+        )
         watcher = scope.launch {
             launch(Dispatchers.IO) {
                 while (isActive) {
-                    api.events { _, _ -> refresh(api) }
+                    api.events { type, data ->
+                        if (type == "received") saveWorker.execute { received.handle(type, data) }
+                        refresh(api)
+                    }
                     delay(2_000) // reconnect
                 }
             }

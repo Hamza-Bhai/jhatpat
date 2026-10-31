@@ -10,6 +10,11 @@ import java.net.URLEncoder
 /** Who an upload is for: kind is "host", "device", "group" or "all" (see the server's Target). */
 data class Target(val kind: String, val id: String = "")
 
+/** Tells the server that a received file now lives somewhere else; [HostApi] is the real one. */
+interface ItemMover {
+    fun markMoved(id: String, where: String): Boolean
+}
+
 /** Something that can send one file to a [Target]; [HostApi] is the real one. */
 interface Uploader {
     fun upload(name: String, size: Long, to: Target, open: () -> InputStream): Result<Unit>
@@ -19,7 +24,7 @@ interface Uploader {
  * The host API of the local JhatPat server, reached over loopback. Every request carries the
  * per-run host cookie.
  */
-class HostApi(private val base: String, private val token: String) : Uploader {
+class HostApi(private val base: String, private val token: String) : Uploader, ItemMover {
     private class Reply(val code: Int, val body: String) {
         val ok get() = code in 200..299
 
@@ -57,7 +62,7 @@ class HostApi(private val base: String, private val token: String) : Uploader {
 
     fun setIp(ip: String): Boolean = post("/api/host/ip", """{"ip":${Json.quote(ip)}}""")
 
-    fun markMoved(id: String, where: String): Boolean =
+    override fun markMoved(id: String, where: String): Boolean =
         post("/api/host/items/${segment(id)}/moved", """{"where":${Json.quote(where)}}""")
 
     /**

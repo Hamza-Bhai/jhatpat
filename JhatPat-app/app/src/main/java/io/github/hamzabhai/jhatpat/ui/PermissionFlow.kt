@@ -34,6 +34,8 @@ fun rememberStarter(): (Mode) -> Unit {
         val wanted = buildList {
             if (mode == Mode.Hotspot) addAll(HotspotLogic.requiredPermissions(Build.VERSION.SDK_INT))
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
+            // Android 8 and 9 save received files straight into the public folders.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
         val missing = wanted.filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty()) {

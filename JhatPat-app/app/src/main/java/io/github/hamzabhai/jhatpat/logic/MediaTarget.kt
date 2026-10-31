@@ -21,6 +21,19 @@ object MediaTarget {
         }
     }
 
+    /** The MIME type to store the file under; the media collections only accept their own kind. */
+    fun mimeFor(folder: GalleryFolder, name: String, mime: String?): String {
+        val given = mime.orEmpty().lowercase()
+        return when (folder) {
+            GalleryFolder.Pictures ->
+                if (given.startsWith("image/")) given else MimeTypes.forName(name)?.takeIf { it.startsWith("image/") } ?: "image/jpeg"
+            GalleryFolder.Movies ->
+                if (given.startsWith("video/")) given else MimeTypes.forName(name)?.takeIf { it.startsWith("video/") } ?: "video/mp4"
+            GalleryFolder.Download ->
+                if (given.isNotEmpty() && given != "application/octet-stream") given else MimeTypes.forName(name) ?: "application/octet-stream"
+        }
+    }
+
     /** Returns [name], or `base (n).ext` with the first n that is not in [taken] (compared ignoring case). */
     fun uniqueName(name: String, taken: Set<String>): String {
         val takenLower = taken.mapTo(HashSet()) { it.lowercase() }

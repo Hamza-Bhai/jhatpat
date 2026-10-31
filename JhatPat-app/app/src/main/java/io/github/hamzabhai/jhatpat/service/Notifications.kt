@@ -26,6 +26,16 @@ object Notifications {
         }
     }
 
+    /** Tells the person a received file could not be saved and is still in JhatPat's folder. */
+    fun saveFailed(context: Context, name: String, counter: Int): Notification =
+        NotificationCompat.Builder(context, CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Could not save $name")
+            .setContentText("The file is still in JhatPat's folder. Check the free space on this phone.")
+            .setAutoCancel(true)
+            .setGroup("save-failed-$counter")
+            .build()
+
     fun build(context: Context, state: SharingState): Notification {
         val open = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
