@@ -237,6 +237,7 @@ label.lbl { font-weight: 800; font-size: 14px; display: block; margin-bottom: 4p
 /* laptop chat panel */
 /* Inside the Android app the connect card is a native screen, and the chat comes first. */
 .in-app #connectCard { display: none; }
+.in-app .vdl { display: none; } /* the viewer's Download link: the file is already saved on the phone */
 .in-app .host-layout .chatcard { order: -1; }
 .host-layout { display: grid; gap: 18px; grid-template-columns: minmax(300px, 380px) 1fr; align-items: start; }
 .host-layout .side { display: grid; gap: 18px; }
