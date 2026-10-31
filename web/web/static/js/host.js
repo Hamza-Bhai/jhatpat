@@ -302,6 +302,12 @@
 
   document.querySelectorAll("[data-theme-btn]").forEach((b) => (b.onclick = () => JP.theme.toggle()));
 
+  // "Open" on an item the Android app moved to the Gallery: the app opens it natively.
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-open-moved]");
+    if (b && window.JhatPatApp) window.JhatPatApp.open(b.dataset.openMoved);
+  });
+
   JP.sse("/api/host/events", {
     "device-request": (d) => { JP.toast(`📱 <b>${JP.esc(d.name)}</b> ${t("wants_connect")}`, 6000); load(); runDoctor(false); },
     devices: () => load(),

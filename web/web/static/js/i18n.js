@@ -37,6 +37,8 @@
       quit_confirm: "Stop JhatPat? Phones will be disconnected.",
       quit_done: "JhatPat has stopped. You can close this tab.",
       download: "⬇️ Download",
+      open: "Open",
+      saved_to: "Saved to {where}",
       copy: "📋 Copy",
       copied: "Copied!",
       remove: "Remove",

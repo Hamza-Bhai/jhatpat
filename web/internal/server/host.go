@@ -201,6 +201,27 @@ func (s *Server) hostRoutes() {
 		}
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	}))
+	m.HandleFunc("POST /api/host/items/{id}/moved", s.host(func(w http.ResponseWriter, r *http.Request) {
+		var req struct{ Where string }
+		if !readJSON(w, r, 1024, &req) {
+			return
+		}
+		where := strings.TrimSpace(req.Where)
+		if where == "" || len(where) > 100 {
+			writeErr(w, http.StatusBadRequest, "where is required")
+			return
+		}
+		id := r.PathValue("id")
+		it, ok := s.items.Get(id)
+		if !ok || !s.items.MarkMoved(id, where) {
+			writeErr(w, http.StatusNotFound, "no item")
+			return
+		}
+		for _, a := range append([]string{it.From, items.Host}, it.To...) {
+			s.hub.Send(a, events.Event{Type: "item", Data: map[string]string{"id": id}})
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	}))
 	hostItem := func(inline bool) http.HandlerFunc {
 		return s.host(func(w http.ResponseWriter, r *http.Request) {
 			it, ok := s.items.Get(r.PathValue("id"))

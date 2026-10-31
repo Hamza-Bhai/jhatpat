@@ -215,7 +215,13 @@
     const pk = JP.previewKind(it.name, it.kind);
     const size = it.size ? JP.fmtBytes(it.size) : "";
     let body;
-    if (it.kind === "text") {
+    if (it.moved) {
+      const name = it.name + (it.kind === "folder" ? ".zip" : "");
+      const open = window.JhatPatApp ? `<button class="btn small primary" data-open-moved="${it.id}">${t("open")}</button>` : "";
+      body = `<div class="file"><span class="ico">${JP.fileIcon(it.name, it.kind)}</span>
+        <div><b>${JP.esc(name)}</b><span style="opacity:.8">${t("saved_to", { where: JP.esc(it.movedTo) })} ${size}</span></div></div>
+        <div class="acts">${open}</div>`;
+    } else if (it.kind === "text") {
       body = `<div class="txt">${JP.linkify(it.text)}</div>
         <div class="acts"><button class="btn small" data-copy="${it.id}">${t("copy")}</button></div>`;
     } else {
