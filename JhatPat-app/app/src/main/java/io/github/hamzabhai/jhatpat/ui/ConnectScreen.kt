@@ -30,7 +30,7 @@ import io.github.hamzabhai.jhatpat.service.SharingState
 
 /** Shows one QR at a time (see [ConnectUiModel]) plus the way into the chat and the Stop button. */
 @Composable
-fun ConnectScreen(state: SharingState.Running, onOpenChat: () -> Unit, onStop: () -> Unit) {
+fun ConnectScreen(state: SharingState.Running, onOpenChat: () -> Unit, onShareApp: () -> Unit, onStop: () -> Unit) {
     var step by rememberSaveable { mutableIntStateOf(0) }
     val ui = ConnectUiModel.of(state, step)
 
@@ -66,6 +66,7 @@ fun ConnectScreen(state: SharingState.Running, onOpenChat: () -> Unit, onStop: (
         }
 
         PrimaryButton("💬 Open chat", onClick = onOpenChat)
+        SecondaryButton("📲 Share this app (APK)", onClick = onShareApp)
         SecondaryButton("■ Stop sharing", onClick = onStop)
     }
 }

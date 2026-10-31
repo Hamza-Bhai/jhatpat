@@ -60,6 +60,9 @@ class HostApi(private val base: String, private val token: String) : Uploader, I
 
     fun enableApk(minutes: Int): Boolean = post("/api/host/apk/enable", """{"minutes":$minutes}""")
 
+    /** Switches `/app.apk` off again. */
+    fun disableApk(): Boolean = post("/api/host/apk/disable", "{}")
+
     fun setIp(ip: String): Boolean = post("/api/host/ip", """{"ip":${Json.quote(ip)}}""")
 
     override fun markMoved(id: String, where: String): Boolean =

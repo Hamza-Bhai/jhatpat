@@ -227,4 +227,19 @@ class HostApiTest {
         val api = start { Response(403, """{"error":"host only"}""") }
         assertEquals(null, api.recipients())
     }
+
+    @Test
+    fun disableApkPostsToTheDisableRoute() {
+        val api = start()
+        assertTrue(api.disableApk())
+        val r = seen.single()
+        assertEquals("POST /api/host/apk/disable", "${r.method} ${r.target}")
+        assertEquals("jp_host=TOKEN", r.headers["cookie"])
+    }
+
+    @Test
+    fun disableApkReturnsFalseWhenRefused() {
+        val api = start { Response(403, """{"error":"host only"}""") }
+        assertFalse(api.disableApk())
+    }
 }

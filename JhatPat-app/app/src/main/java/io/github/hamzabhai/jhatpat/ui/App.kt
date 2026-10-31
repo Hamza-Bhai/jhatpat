@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import io.github.hamzabhai.jhatpat.service.SharingController
 import io.github.hamzabhai.jhatpat.service.SharingState
 
-private enum class Screen { Connect, Chat }
+private enum class Screen { Connect, Chat, ShareApp }
 
 /** Start while idle (or after an error), Connect and Chat while sharing. */
 @Composable
@@ -32,7 +32,13 @@ fun JhatPatApp(openReceived: (String) -> Unit = {}) {
         when (val s = state) {
             is SharingState.Running -> when (screen) {
                 Screen.Chat -> ChatScreen(s, onBack = { screen = Screen.Connect }, openReceived = openReceived)
-                Screen.Connect -> ConnectScreen(s, onOpenChat = { screen = Screen.Chat }, onStop = { SharingController.stop(context) })
+                Screen.ShareApp -> ShareAppScreen(s, onClose = { screen = Screen.Connect })
+                Screen.Connect -> ConnectScreen(
+                    s,
+                    onOpenChat = { screen = Screen.Chat },
+                    onShareApp = { screen = Screen.ShareApp },
+                    onStop = { SharingController.stop(context) },
+                )
             }
             else -> StartScreen(s, onStart = start)
         }
