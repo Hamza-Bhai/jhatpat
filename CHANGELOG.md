@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-31
+
 ### Added
 - **Android app** (`JhatPat-app/`): a phone can be the JhatPat host. It runs the same server, can create a hotspot (one QR at a time), accepts "Share to JhatPat" from other apps, saves received files to the Gallery or Downloads, can share its own APK, and keeps running with the screen off. Signed APKs are attached to each GitHub release.
 - Server options for the app: `-config-dir`, `-json-startup`, `-exit-on-stdin-close`, `-no-doctor`, `-host-name`, `-host-kind` and `-apk`, plus a runtime `POST /api/host/ip`, `/app.apk` (only while the host switches it on), and "received" and "moved" events.
