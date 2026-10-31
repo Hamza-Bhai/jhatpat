@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -96,12 +97,21 @@ func TestReceivedPathNeverInViews(t *testing.T) {
 	h := hostOf(t, s)
 	p, _ := joinApproved(t, s, h, lanAddr, "Ali")
 	upload(t, p, "/api/dev/uploads", "photo.jpg", []byte("jpegdata"), map[string]string{"kind": "host"})
+	// The save folder itself is shown on the host page on purpose; what must never appear is the
+	// path of a received file (in JSON, Windows backslashes are doubled).
+	filePath := filepath.Join(s.cfg.SaveDir, "photo.jpg")
+	forms := []string{filePath, strings.ReplaceAll(filePath, `\`, `\`)}
 	for name, body := range map[string]string{
 		"dev items":  p.do("GET", "/api/dev/items", nil).Body.String(),
 		"host state": h.do("GET", "/api/host/state", nil).Body.String(),
 	} {
-		if strings.Contains(body, s.cfg.SaveDir) || strings.Contains(body, `"path"`) {
-			t.Errorf("%s leaks the saved path: %s", name, body)
+		for _, f := range forms {
+			if strings.Contains(body, f) {
+				t.Errorf("%s leaks the received file's path %q: %s", name, f, body)
+			}
+		}
+		if strings.Contains(body, `"path"`) {
+			t.Errorf("%s has a path field: %s", name, body)
 		}
 	}
 }
