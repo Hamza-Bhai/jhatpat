@@ -91,7 +91,7 @@ func (s *Server) addItem(it items.Item) items.Item {
 
 func (s *Server) nameOf(id string) string {
 	if id == items.Host {
-		return "Laptop"
+		return s.cfg.HostName
 	}
 	if d, ok := s.devices.Get(id); ok {
 		return d.Name

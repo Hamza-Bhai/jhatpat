@@ -137,7 +137,7 @@ func (s *Server) dev(h func(http.ResponseWriter, *http.Request, *auth.Device)) h
 func (s *Server) deviceRoutes() {
 	m := s.mux
 	m.HandleFunc("GET /api/dev/me", s.dev(func(w http.ResponseWriter, r *http.Request, d *auth.Device) {
-		writeJSON(w, http.StatusOK, map[string]string{"id": d.ID, "name": d.Name})
+		writeJSON(w, http.StatusOK, map[string]string{"id": d.ID, "name": d.Name, "hostName": s.cfg.HostName, "hostKind": s.cfg.HostKind})
 	}))
 	m.HandleFunc("POST /api/dev/rename", s.dev(func(w http.ResponseWriter, r *http.Request, d *auth.Device) {
 		var req struct{ Name string }
@@ -173,7 +173,7 @@ func (s *Server) deviceRoutes() {
 		for _, g := range s.groups.List() {
 			grps = append(grps, map[string]string{"id": g.ID, "name": g.Name})
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"devices": devs, "groups": grps})
+		writeJSON(w, http.StatusOK, map[string]any{"devices": devs, "groups": grps, "hostName": s.cfg.HostName, "hostKind": s.cfg.HostKind})
 	}))
 	m.HandleFunc("POST /api/dev/text", s.dev(func(w http.ResponseWriter, r *http.Request, d *auth.Device) {
 		var req struct {

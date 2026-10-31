@@ -43,6 +43,9 @@ func main() {
 	configDir := flag.String("config-dir", "", "folder for JhatPat's own state (default: the user config folder)")
 	jsonStartup := flag.Bool("json-startup", false, "print one JSON line with the port, tokens and PIN instead of the banner")
 	exitOnStdinClose := flag.Bool("exit-on-stdin-close", false, "exit when standard input is closed (for a parent process)")
+	noDoctor := flag.Bool("no-doctor", false, "turn the Network Doctor off (used on Android)")
+	hostName := flag.String("host-name", "", "how other devices see this host (default \"Laptop\")")
+	hostKind := flag.String("host-kind", "laptop", "laptop or phone: picks the icon other devices show")
 	apkPath := flag.String("apk", "", "path of this app's own APK, for the host to share (Android)")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
@@ -68,7 +71,12 @@ func main() {
 		cfgDir = filepath.Join(cfgRoot, "JhatPat")
 	}
 
-	doctor := netdoctor.New(actualPort, *preferIP)
+	var doctorRunner server.DoctorRunner
+	var doctor *netdoctor.Doctor
+	if !*noDoctor {
+		doctor = netdoctor.New(actualPort, *preferIP)
+		doctorRunner = doctor
+	}
 	srv, err := server.New(server.Config{
 		Port:      actualPort,
 		SaveDir:   *dir,
@@ -76,7 +84,9 @@ func main() {
 		APKPath:   *apkPath,
 		Web:       web.FS,
 		OpenPath:  openPath,
-		Doctor:    doctor,
+		Doctor:    doctorRunner,
+		HostName:  *hostName,
+		HostKind:  *hostKind,
 		Quit:      stop, // "Quit" button on the host page (no terminal when double-clicked)
 	})
 	if err != nil {
@@ -89,7 +99,9 @@ func main() {
 		srv.SetIP(adapters[0].IP)
 	}
 
-	go watchNetwork(ctx, doctor, srv)
+	if doctor != nil {
+		go watchNetwork(ctx, doctor, srv)
+	}
 
 	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 15 * time.Second}
 	go func() {

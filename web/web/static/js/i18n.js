@@ -3,7 +3,7 @@
   const JP = (window.JP = window.JP || {});
   const dict = {
     en: {
-      tagline: "Phone ↔ Laptop over WiFi",
+      tagline: "Phone ↔ {Host} over WiFi",
       connect_title: "📱 Connect a phone",
       connect_help: "Scan the QR with your phone camera, or open the link and type the PIN.",
       new_pin: "🔄 New PIN",
@@ -11,7 +11,7 @@
       send_title: "🎁 Send to phones",
       send_to: "Send to",
       to_all: "📢 Everyone",
-      to_laptop: "💻 Laptop",
+      to_laptop: "{hostIcon} {Host}",
       drop_here: "Drop files here!",
       drop_sub: "or tap to choose",
       pick_laptop: "📁 Pick files/folders from laptop",
@@ -71,16 +71,16 @@
       up: "⬆️ Up",
       send_selected: "Send selected",
       // phone
-      join_title: "Enter the PIN shown on the laptop 🔐",
+      join_title: "Enter the PIN shown on the {host} 🔐",
       your_name: "Your device name",
       edit_name: "Tap to change your device name",
       connect: "Connect",
       qr_hint: "Scanned the QR? Then no PIN needed.",
       wrong_pin: "Wrong PIN. Try again.",
       locked: "Too many tries. Wait 5 minutes or ask for a new PIN.",
-      waiting: "Waiting for the laptop to allow you…",
-      waiting_sub: "Ask the laptop owner to tap ✅ Allow.",
-      blocked: "The laptop blocked this device.",
+      waiting: "Waiting for the {host} to allow you…",
+      waiting_sub: "Ask the {host} owner to tap ✅ Allow.",
+      blocked: "The {host} blocked this device.",
       connected: "Connected ✅",
       send_btn: "📤 Send",
       receive_btn: "📥 Received",
@@ -101,7 +101,12 @@
   JP.t = function (key, vars) {
     let s = dict.en[key] || key;
     if (vars) Object.keys(vars).forEach((k) => (s = s.split("{" + k + "}").join(vars[k])));
-    return s;
+    // The server injects window.JPHOST = {name, kind}: "Laptop" by default, "Phone" on an Android host.
+    const h = window.JPHOST || { name: "Laptop", kind: "laptop" };
+    return s
+      .split("{Host}").join(h.name)
+      .split("{host}").join(h.name.toLowerCase())
+      .split("{hostIcon}").join(h.kind === "phone" ? "📱" : "💻");
   };
   JP.has = (key) => key in dict.en;
   JP.applyI18n = function (root = document) {

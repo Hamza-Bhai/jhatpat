@@ -2,6 +2,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -43,6 +45,10 @@ type Config struct {
 	Web fs.FS
 	// OpenPath opens a folder in the OS file manager. Nil disables it.
 	OpenPath func(path string) error
+	// HostName is how other devices see the host ("Laptop" by default).
+	HostName string
+	// HostKind is "laptop" (default) or "phone"; it picks the icon.
+	HostKind string
 	// APKPath is this app's own installed APK, shared on request (Android only).
 	APKPath string
 	// Doctor runs network checks. Nil disables the doctor endpoints.
@@ -81,6 +87,10 @@ type Server struct {
 func New(cfg Config) (*Server, error) {
 	if cfg.SaveDir == "" || cfg.ConfigDir == "" {
 		return nil, errors.New("SaveDir and ConfigDir are required")
+	}
+	cfg.HostName = cleanHostName(cfg.HostName)
+	if cfg.HostKind != "phone" {
+		cfg.HostKind = "laptop"
 	}
 	if err := os.MkdirAll(cfg.SaveDir, 0o755); err != nil {
 		return nil, err
@@ -265,6 +275,26 @@ func cookie(r *http.Request, name string) string {
 	return c.Value
 }
 
+// cleanHostName trims the name, caps its length and falls back to "Laptop".
+func cleanHostName(name string) string {
+	name = strings.TrimSpace(name)
+	if r := []rune(name); len(r) > 40 {
+		name = string(r[:40])
+	}
+	if name == "" {
+		return "Laptop"
+	}
+	return name
+}
+
+// hostIdentityScript tells the page what the host is called, so labels like
+// "Laptop" read "Phone" on a phone host. json.Marshal escapes <, > and &, so
+// the name cannot close the script tag.
+func (s *Server) hostIdentityScript() []byte {
+	b, _ := json.Marshal(map[string]string{"name": s.cfg.HostName, "kind": s.cfg.HostKind})
+	return append(append([]byte("<script>window.JPHOST="), b...), "</script>"...)
+}
+
 // page serves one HTML page from Web, or a placeholder.
 func (s *Server) page(w http.ResponseWriter, name string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -277,6 +307,9 @@ func (s *Server) page(w http.ResponseWriter, name string) {
 	if err != nil {
 		http.Error(w, "missing page", http.StatusInternalServerError)
 		return
+	}
+	if i := bytes.Index(b, []byte("</head>")); i >= 0 {
+		b = append(append(append([]byte{}, b[:i]...), s.hostIdentityScript()...), b[i:]...)
 	}
 	_, _ = w.Write(b)
 }
