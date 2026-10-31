@@ -72,11 +72,18 @@ Needs Go 1.24 or newer.
 
 ```bash
 git clone https://github.com/Hamza-Bhai/jhatpat
-cd jhatpat
+cd jhatpat/web
 go test ./...
 go build -o jhatpat ./cmd/jhatpat
 # Windows, no terminal window on double-click: run build-windows.bat (uses -ldflags "-H=windowsgui")
 ```
+
+## Repository layout
+
+| Folder | What it is |
+|---|---|
+| [`web/`](web) | The JhatPat server and web interface (Go). Runs on Windows, macOS and Linux. |
+| `app/` | The Android app, so a phone can be the host (in development). |
 
 ## Contributing
 

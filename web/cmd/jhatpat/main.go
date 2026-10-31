@@ -19,10 +19,10 @@ import (
 
 	qrcode "github.com/skip2/go-qrcode"
 
-	"github.com/Hamza-Bhai/jhatpat/internal/events"
-	"github.com/Hamza-Bhai/jhatpat/internal/netdoctor"
-	"github.com/Hamza-Bhai/jhatpat/internal/server"
-	"github.com/Hamza-Bhai/jhatpat/web"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/netdoctor"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/server"
+	"github.com/Hamza-Bhai/jhatpat/web/web"
 )
 
 // version is set at release time: -ldflags "-X main.version=v1.2.3".

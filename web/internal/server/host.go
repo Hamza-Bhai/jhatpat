@@ -10,10 +10,10 @@ import (
 
 	qrcode "github.com/skip2/go-qrcode"
 
-	"github.com/Hamza-Bhai/jhatpat/internal/auth"
-	"github.com/Hamza-Bhai/jhatpat/internal/events"
-	"github.com/Hamza-Bhai/jhatpat/internal/items"
-	"github.com/Hamza-Bhai/jhatpat/internal/netdoctor"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/auth"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/items"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/netdoctor"
 )
 
 // host guards laptop-owner routes: loopback only, plus the host cookie.

@@ -1,4 +1,18 @@
-/dist/
+/web/dist/
 *.exe
 .superpowers/
 docs/superpowers/
+
+# Android app (app/)
+/app/build/
+/app/*/build/
+.gradle/
+local.properties
+*.jks
+*.keystore
+captures/
+.idea/
+
+# Copied in by goreleaser before packaging
+/web/README.md
+/web/LICENSE

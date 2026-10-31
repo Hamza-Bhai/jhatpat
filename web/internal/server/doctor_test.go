@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Hamza-Bhai/jhatpat/internal/netdoctor"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/netdoctor"
 )
 
 type fakeDoctor struct {

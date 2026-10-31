@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Hamza-Bhai/jhatpat/internal/auth"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/auth"
 )
 
 var (

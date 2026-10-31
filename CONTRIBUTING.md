@@ -14,19 +14,21 @@ You need [Go](https://go.dev/dl/) 1.24 or newer. No other tools are required: th
 
 ```bash
 git clone https://github.com/Hamza-Bhai/jhatpat
-cd jhatpat
+cd jhatpat/web
 go test ./...
 go run ./cmd/jhatpat
 ```
 
-On Windows, `build-windows.bat` builds `dist\jhatpat.exe` without a terminal window.
+The repository has two parts: `web/` (the Go server and web UI, described above) and `app/` (the Android app, in development). Run Go commands from inside `web/`.
+
+On Windows, `web\build-windows.bat` builds `web\dist\jhatpat.exe` without a terminal window.
 
 ## Pull requests
 
 1. Create a branch from `main`.
 2. Keep the change focused. One topic per pull request.
 3. Add or update tests for behavior changes.
-4. Run `gofmt -l .`, `go vet ./...` and `go test ./...`. CI runs them on Windows, Linux and macOS.
+4. Run `gofmt -l .`, `go vet ./...` and `go test ./...` from `web/`. CI runs them on Windows, Linux and macOS.
 5. Update `CHANGELOG.md` under **Unreleased** for user-visible changes.
 6. Use clear commit messages. [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`) are appreciated.
 

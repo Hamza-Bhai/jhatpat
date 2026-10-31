@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/Hamza-Bhai/jhatpat/internal/auth"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/auth"
 )
 
 // ChunkSize is the largest body accepted by one WriteChunk call.

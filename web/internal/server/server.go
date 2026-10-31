@@ -15,12 +15,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Hamza-Bhai/jhatpat/internal/auth"
-	"github.com/Hamza-Bhai/jhatpat/internal/events"
-	"github.com/Hamza-Bhai/jhatpat/internal/groups"
-	"github.com/Hamza-Bhai/jhatpat/internal/items"
-	"github.com/Hamza-Bhai/jhatpat/internal/netdoctor"
-	"github.com/Hamza-Bhai/jhatpat/internal/transfer"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/auth"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/groups"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/items"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/netdoctor"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/transfer"
 )
 
 // MaxText is the largest text item accepted.

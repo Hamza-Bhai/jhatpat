@@ -1,4 +1,4 @@
-module github.com/Hamza-Bhai/jhatpat
+module github.com/Hamza-Bhai/jhatpat/web
 
 go 1.24
 

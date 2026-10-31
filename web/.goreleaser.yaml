@@ -1,6 +1,11 @@
 version: 2
 project_name: jhatpat
 
+before:
+  hooks:
+    # Repo-wide files live one level up; copy them in so the archives can include them.
+    - cp ../README.md ../LICENSE .
+
 builds:
   - main: ./cmd/jhatpat
     binary: jhatpat
