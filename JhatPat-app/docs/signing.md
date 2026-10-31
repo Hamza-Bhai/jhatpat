@@ -32,8 +32,8 @@ Android only installs an APK that is signed, and it only accepts an update signe
 
    | Where you type the command | Copy a file's text to the clipboard |
    |---|---|
-   | Command Prompt (`cmd`) | `clip < C:\path	o\ANDROID_KEYSTORE_BASE64.txt` |
-   | PowerShell | `Get-Content -Raw C:\path	o\ANDROID_KEYSTORE_BASE64.txt \| Set-Clipboard` |
+   | Command Prompt (`cmd`) | `clip < C:\path\to\ANDROID_KEYSTORE_BASE64.txt` |
+   | PowerShell | `Get-Content -Raw C:\path\to\ANDROID_KEYSTORE_BASE64.txt \| Set-Clipboard` |
    | macOS | `pbcopy < /path/to/ANDROID_KEYSTORE_BASE64.txt` |
    | Linux (X11) | `xclip -selection clipboard < /path/to/ANDROID_KEYSTORE_BASE64.txt` |
 
