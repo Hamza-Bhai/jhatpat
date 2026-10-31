@@ -64,6 +64,10 @@ There are two ways to run it. Both give everyone the same page in their browser,
 
 Runs on **Windows, macOS and Linux**. One small file, nothing else to install.
 
+<p align="center">
+  <img src="docs/images/laptop-host.jpg" alt="JhatPat on a laptop: QR code and PIN on the left, chat on the right" width="760">
+</p>
+
 ### Quick start
 
 1. Download JhatPat for your system from the [Releases](../../releases/latest) page and unzip it.
