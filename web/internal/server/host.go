@@ -3,10 +3,12 @@ package server
 import (
 	"crypto/subtle"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	qrcode "github.com/skip2/go-qrcode"
 
@@ -77,6 +79,20 @@ func (s *Server) hostRoutes() {
 		s.join.Regenerate()
 		s.hub.Send(items.Host, events.Event{Type: "pin", Data: map[string]string{"pin": s.join.PIN()}})
 		writeJSON(w, http.StatusOK, map[string]string{"pin": s.join.PIN(), "joinURL": s.joinURL()})
+	}))
+
+	m.HandleFunc("POST /api/host/ip", s.host(func(w http.ResponseWriter, r *http.Request) {
+		var req struct{ IP string }
+		if !readJSON(w, r, 1024, &req) {
+			return
+		}
+		ip := net.ParseIP(req.IP)
+		if ip == nil || ip.To4() == nil || !ip.IsPrivate() || strings.ContainsAny(req.IP, "/:") {
+			writeErr(w, http.StatusBadRequest, "need a private IPv4 address")
+			return
+		}
+		s.SetIP(ip.String())
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	}))
 
 	deviceAction := func(act func(id string) error, after func(d *auth.Device)) http.HandlerFunc {

@@ -14,7 +14,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"sync/atomic"
 	"time"
 
 	qrcode "github.com/skip2/go-qrcode"
@@ -82,25 +81,13 @@ func main() {
 		fatal("JhatPat could not start: %v", err)
 	}
 
-	var ip atomic.Value
-	ip.Store("")
-	if adapters, err := netdoctor.ListAdapters(); err == nil {
-		for _, a := range adapters {
-			if *preferIP == "" || a.IP == *preferIP {
-				ip.Store(a.IP)
-				break
-			}
-		}
+	if *preferIP != "" {
+		srv.SetIP(*preferIP)
+	} else if adapters, err := netdoctor.ListAdapters(); err == nil && len(adapters) > 0 {
+		srv.SetIP(adapters[0].IP)
 	}
-	srv.SetJoinURL(func() string {
-		cur := ip.Load().(string)
-		if cur == "" {
-			return ""
-		}
-		return fmt.Sprintf("http://%s:%d/j/%s", cur, actualPort, srv.Join().Secret())
-	})
 
-	go watchNetwork(ctx, doctor, srv, &ip)
+	go watchNetwork(ctx, doctor, srv)
 
 	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 15 * time.Second}
 	go func() {
@@ -113,13 +100,13 @@ func main() {
 	if *jsonStartup {
 		err := launch.WriteStartup(os.Stdout, launch.StartupInfo{
 			Port: actualPort, HostToken: srv.HostToken(), PIN: srv.Join().PIN(),
-			Secret: srv.Join().Secret(), IP: ip.Load().(string), HostURL: hostURL,
+			Secret: srv.Join().Secret(), IP: srv.IP(), HostURL: hostURL,
 		})
 		if err != nil {
 			fatal("JhatPat could not report its address: %v", err)
 		}
 	} else {
-		printBanner(srv, ip.Load().(string), actualPort, hostURL, *dir)
+		printBanner(srv, srv.IP(), actualPort, hostURL, *dir)
 	}
 	if !*noBrowser {
 		_ = openURL(hostURL)
@@ -156,14 +143,13 @@ func listen(start int) (net.Listener, error) {
 
 // watchNetwork re-runs the doctor every 30s, tells the host page, and
 // switches the QR address when the laptop's IP changes.
-func watchNetwork(ctx context.Context, d *netdoctor.Doctor, srv *server.Server, ip *atomic.Value) {
+func watchNetwork(ctx context.Context, d *netdoctor.Doctor, srv *server.Server) {
 	tick := time.NewTicker(30 * time.Second)
 	defer tick.Stop()
 	for {
 		r := d.Run(ctx, netdoctor.Options{PhoneSeen: srv.PhoneSeen()})
-		if r.IP != "" && r.IP != ip.Load().(string) {
-			ip.Store(r.IP)
-			srv.Hub().Send("host", events.Event{Type: "pin", Data: map[string]string{"ip": r.IP}})
+		if r.IP != "" && r.IP != srv.IP() {
+			srv.SetIP(r.IP)
 		}
 		srv.Hub().Send("host", events.Event{Type: "doctor", Data: r})
 		select {

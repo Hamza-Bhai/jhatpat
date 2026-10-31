@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net"
 	"net/http"
@@ -67,8 +68,9 @@ type Server struct {
 	uploads    *transfer.Uploads // phone → laptop, saved in SaveDir
 	outbox     *transfer.Uploads // host drag-and-drop staging
 	joinURL    func() string
-	uploadMeta sync.Map    // upload id → uploadMeta
-	phoneSeen  atomic.Bool // a non-loopback device joined this run
+	ip         atomic.Value // string: the address put in the QR code and join link
+	uploadMeta sync.Map     // upload id → uploadMeta
+	phoneSeen  atomic.Bool  // a non-loopback device joined this run
 }
 
 // New builds a Server from cfg.
@@ -100,7 +102,8 @@ func New(cfg Config) (*Server, error) {
 		uploads:   transfer.NewUploads(cfg.SaveDir),
 		outbox:    transfer.NewUploads(outboxDir),
 	}
-	s.joinURL = func() string { return "" }
+	s.ip.Store("")
+	s.joinURL = s.defaultJoinURL
 	s.routes()
 	return s, nil
 }
@@ -126,8 +129,27 @@ func (s *Server) HostToken() string { return s.hostToken }
 // Join exposes the PIN/secret holder (for the startup banner).
 func (s *Server) Join() *auth.Join { return s.join }
 
-// SetJoinURL sets how the server builds the QR join link (it depends on the chosen IP).
+// SetJoinURL overrides how the server builds the QR join link. By default it
+// is built from IP() and the port.
 func (s *Server) SetJoinURL(f func() string) { s.joinURL = f }
+
+// IP returns the address advertised in the join link ("" when unknown).
+func (s *Server) IP() string { return s.ip.Load().(string) }
+
+// SetIP changes the advertised address and tells the host page. It does not
+// validate: callers are the trusted startup code and the validated HTTP route.
+func (s *Server) SetIP(ip string) {
+	s.ip.Store(ip)
+	s.hub.Send(items.Host, events.Event{Type: "pin", Data: map[string]string{"ip": ip}})
+}
+
+func (s *Server) defaultJoinURL() string {
+	ip := s.IP()
+	if ip == "" {
+		return ""
+	}
+	return fmt.Sprintf("http://%s:%d/j/%s", ip, s.cfg.Port, s.join.Secret())
+}
 
 // Hub exposes the event hub (Network Doctor publishes through it).
 func (s *Server) Hub() *events.Hub { return s.hub }
