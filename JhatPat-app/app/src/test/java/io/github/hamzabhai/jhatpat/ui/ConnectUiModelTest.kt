@@ -61,6 +61,21 @@ class ConnectUiModelTest {
     }
 
     @Test
+    fun hotspotStepOneAlsoShowsTheNameAndPasswordAsTextAndHowToScan() {
+        val ui = ConnectUiModel.of(hotspotMode(), step = 0)
+        assertEquals("JhatPat-4F2A", ui.wifiName)
+        assertEquals("pa;ss:word", ui.wifiPassword)
+        assertTrue(ui.caption.contains("Google Lens"))
+        assertTrue(ui.caption.contains("Settings"))
+    }
+
+    @Test
+    fun otherScreensShowNoWifiDetails() {
+        assertNull(ConnectUiModel.of(hotspotMode(), step = 1).wifiName)
+        assertNull(ConnectUiModel.of(wifi(), step = 0).wifiPassword)
+    }
+
+    @Test
     fun stepsAreClamped() {
         assertEquals(ConnectUiModel.of(hotspotMode(), 0), ConnectUiModel.of(hotspotMode(), -3))
         assertEquals(ConnectUiModel.of(hotspotMode(), 1), ConnectUiModel.of(hotspotMode(), 9))

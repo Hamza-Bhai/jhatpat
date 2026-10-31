@@ -18,6 +18,9 @@ data class ConnectUi(
     val stepLabel: String?,
     val nextButton: String?,
     val hasBack: Boolean,
+    /** Hotspot step 1 only: the network name and password as text, for cameras that do not read WiFi QR codes. */
+    val wifiName: String? = null,
+    val wifiPassword: String? = null,
 )
 
 object ConnectUiModel {
@@ -46,9 +49,10 @@ object ConnectUiModel {
                 0 -> ConnectUi(
                     qrText = WifiQr.build(hotspot.ssid, hotspot.password),
                     title = "Step 1 of 2 · Join the WiFi",
-                    caption = "${hotspot.ssid} · scan with the camera app",
+                    caption = "Scan with Google Lens, or Settings > WiFi > add network > scan icon. If your camera app only shows text, join ${hotspot.ssid} by hand with the password below.",
                     showPin = false, pin = info.pin, address = null, stepLabel = "1 of 2",
                     nextButton = "They're connected, next", hasBack = false,
+                    wifiName = hotspot.ssid, wifiPassword = hotspot.password,
                 )
                 else -> ConnectUi(
                     qrText = join,

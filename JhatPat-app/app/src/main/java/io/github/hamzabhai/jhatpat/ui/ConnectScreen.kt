@@ -61,6 +61,10 @@ fun ConnectScreen(state: SharingState.Running, onOpenChat: () -> Unit, onShareAp
                 )
             }
             Text(ui.caption, color = Muted, fontSize = 13.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            if (ui.wifiName != null && ui.wifiPassword != null) {
+                Text("WiFi: ${ui.wifiName}", color = Cream, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text("Password: ${ui.wifiPassword}", color = Yellow, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
             ui.nextButton?.let { PrimaryButton(it, onClick = { step = 1 }) }
             if (ui.hasBack) SecondaryButton("Back", onClick = { step = 0 })
         }
