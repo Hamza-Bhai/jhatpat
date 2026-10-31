@@ -110,6 +110,26 @@ func (r *Registry) Block(id string) error {
 	return err
 }
 
+// ErrNotBlocked is returned by Unblock for a device that is not blocked.
+var ErrNotBlocked = errors.New("device is not blocked")
+
+// Unblock lifts a block: the device is forgotten and its PersistentID may ask to join again.
+func (r *Registry) Unblock(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	d, ok := r.byID[id]
+	if !ok {
+		return ErrNoDevice
+	}
+	if d.State != Blocked {
+		return ErrNotBlocked
+	}
+	delete(r.byID, id)
+	delete(r.byToken, d.Token)
+	delete(r.blockedPID, d.PersistentID)
+	return nil
+}
+
 // Kick removes a device; it may ask to join again.
 func (r *Registry) Kick(id string) error {
 	r.mu.Lock()

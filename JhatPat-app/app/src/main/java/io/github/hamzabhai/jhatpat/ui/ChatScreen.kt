@@ -59,7 +59,7 @@ fun ChatScreen(state: SharingState.Running, onBack: () -> Unit, openReceived: (S
             WebView(ctx).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
-                addJavascriptInterface(HostBridge(openReceived), "JhatPatApp")
+                addJavascriptInterface(HostBridge(openReceived, onBack), "JhatPatApp")
                 webViewClient = object : WebViewClient() {
                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                         if (request.method != "GET" || request.url.host != "127.0.0.1") return null

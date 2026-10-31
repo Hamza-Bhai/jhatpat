@@ -11,6 +11,10 @@
   // received-folder button and the host's file browser are handled natively there.
   const inApp = !!window.JhatPatApp;
   if (inApp) document.documentElement.classList.add("in-app");
+  if (inApp) {
+    $("#qrBtn").classList.remove("hidden");
+    $("#qrBtn").onclick = () => window.JhatPatApp.showQr();
+  }
   if (inApp) ["#quitBtn", "#openFolder", "#pickLaptop"].forEach((sel) => $(sel) && $(sel).classList.add("hidden"));
   JP.viewSource = () => ({ items: state.items.filter(inConversation).reverse(), base: "/api/host/items/" });
 
@@ -79,6 +83,7 @@
             <button class="btn small" data-rename="${d.id}">${t("rename")}</button>
             <button class="btn small" data-kick="${d.id}">${t("kick")}</button>
             ${d.state === "approved" ? `<button class="btn small red" data-block="${d.id}">${t("block")}</button>` : ""}
+            ${d.state === "blocked" ? `<button class="btn small green" data-unblock="${d.id}">${t("unblock")}</button>` : ""}
           </span></li>`
           )
           .join("")
@@ -224,6 +229,7 @@
     const d = el.dataset;
     if (d.approve) await act(() => JP.api(`/api/host/devices/${d.approve}/approve`, { method: "POST" }));
     else if (d.block) await act(() => JP.api(`/api/host/devices/${d.block}/block`, { method: "POST" }));
+    else if (d.unblock) await act(() => JP.api(`/api/host/devices/${d.unblock}/unblock`, { method: "POST" }));
     else if (d.kick) await act(() => JP.api(`/api/host/devices/${d.kick}/kick`, { method: "POST" }));
     else if (d.rename) {
       const name = prompt(t("rename"));
