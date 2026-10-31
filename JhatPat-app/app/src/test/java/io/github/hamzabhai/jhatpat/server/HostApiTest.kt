@@ -161,4 +161,25 @@ class HostApiTest {
         assertEquals("/api/host/events", seen.single().target)
         assertEquals("jp_host=TOKEN", seen.single().headers["cookie"])
     }
+
+    @Test
+    fun summaryCountsConnectedDevicesAndReceivedItems() {
+        val api = start {
+            Response(
+                200,
+                """{"devices":[{"state":"approved"},{"state":"pending"},{"state":"approved"},{"state":"blocked"}],""" +
+                    """"items":[{"from":"host"},{"from":"d1"},{"from":"d2"},{"from":"d1"}]}""",
+            )
+        }
+        assertEquals(HostApi.Summary(connected = 2, received = 3), api.summary())
+        assertEquals("/api/host/state", seen.single().target)
+    }
+
+    @Test
+    fun summaryIsNullWhenTheServerRefusesOrIsUnreachable() {
+        val api = start { Response(403, """{"error":"host only"}""") }
+        assertEquals(null, api.summary())
+        fake!!.close()
+        assertEquals(null, api.summary())
+    }
 }

@@ -22,6 +22,32 @@ class HostApi(private val base: String, private val token: String) {
             (runCatching { Json.parse(body) }.getOrNull() as? Map<*, *>)?.get("error") as? String ?: "HTTP $code"
     }
 
+    /** How many devices are connected and how many files or folders others have sent to the host. */
+    data class Summary(val connected: Int, val received: Int)
+
+    /** Reads the host state for the notification. Null when the server cannot be reached or refuses. */
+    fun summary(): Summary? = try {
+        val reply = request("GET", "/api/host/state", null, 0)
+        if (!reply.ok) {
+            null
+        } else {
+            val state = Json.parse(reply.body) as? Map<*, *>
+            val devices = state?.get("devices") as? List<*> ?: emptyList<Any?>()
+            val items = state?.get("items") as? List<*> ?: emptyList<Any?>()
+            Summary(
+                connected = devices.count { (it as? Map<*, *>)?.get("state") == "approved" },
+                received = items.count {
+                    val item = it as? Map<*, *>
+                    item?.get("from") != "host" && item?.get("kind") != "text"
+                },
+            )
+        }
+    } catch (_: IOException) {
+        null
+    } catch (_: IllegalArgumentException) {
+        null
+    }
+
     fun enableApk(minutes: Int): Boolean = post("/api/host/apk/enable", """{"minutes":$minutes}""")
 
     fun setIp(ip: String): Boolean = post("/api/host/ip", """{"ip":${Json.quote(ip)}}""")

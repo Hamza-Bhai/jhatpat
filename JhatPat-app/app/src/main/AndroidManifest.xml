@@ -28,6 +28,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.JhatPat">
 
+        <service
+            android:name=".service.SharingService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Runs the local file-sharing server while the person shares files" />
+        </service>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
