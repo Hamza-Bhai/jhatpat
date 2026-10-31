@@ -20,6 +20,7 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/Hamza-Bhai/jhatpat/web/internal/events"
+	"github.com/Hamza-Bhai/jhatpat/web/internal/launch"
 	"github.com/Hamza-Bhai/jhatpat/web/internal/netdoctor"
 	"github.com/Hamza-Bhai/jhatpat/web/internal/server"
 	"github.com/Hamza-Bhai/jhatpat/web/web"
@@ -40,6 +41,9 @@ func main() {
 	dir := flag.String("dir", filepath.Join(home, "Downloads", "JhatPat"), "folder for received files")
 	noBrowser := flag.Bool("no-browser", false, "do not open the host page automatically")
 	preferIP := flag.String("ip", "", "network address to put in the QR code (default: best WiFi address)")
+	configDir := flag.String("config-dir", "", "folder for JhatPat's own state (default: the user config folder)")
+	jsonStartup := flag.Bool("json-startup", false, "print one JSON line with the port, tokens and PIN instead of the banner")
+	exitOnStdinClose := flag.Bool("exit-on-stdin-close", false, "exit when standard input is closed (for a parent process)")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 	if *showVersion {
@@ -55,12 +59,20 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
+	if *exitOnStdinClose {
+		go launch.ExitWhenClosed(os.Stdin, stop)
+	}
+
+	cfgDir := *configDir
+	if cfgDir == "" {
+		cfgDir = filepath.Join(cfgRoot, "JhatPat")
+	}
 
 	doctor := netdoctor.New(actualPort, *preferIP)
 	srv, err := server.New(server.Config{
 		Port:      actualPort,
 		SaveDir:   *dir,
-		ConfigDir: filepath.Join(cfgRoot, "JhatPat"),
+		ConfigDir: cfgDir,
 		Web:       web.FS,
 		OpenPath:  openPath,
 		Doctor:    doctor,
@@ -98,7 +110,17 @@ func main() {
 	}()
 
 	hostURL := fmt.Sprintf("http://localhost:%d/host?t=%s", actualPort, srv.HostToken())
-	printBanner(srv, ip.Load().(string), actualPort, hostURL, *dir)
+	if *jsonStartup {
+		err := launch.WriteStartup(os.Stdout, launch.StartupInfo{
+			Port: actualPort, HostToken: srv.HostToken(), PIN: srv.Join().PIN(),
+			Secret: srv.Join().Secret(), IP: ip.Load().(string), HostURL: hostURL,
+		})
+		if err != nil {
+			fatal("JhatPat could not report its address: %v", err)
+		}
+	} else {
+		printBanner(srv, ip.Load().(string), actualPort, hostURL, *dir)
+	}
 	if !*noBrowser {
 		_ = openURL(hostURL)
 	}
