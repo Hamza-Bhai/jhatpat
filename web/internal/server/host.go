@@ -66,7 +66,7 @@ func (s *Server) hostState() map[string]any {
 	return map[string]any{
 		"pin": s.join.PIN(), "joinURL": s.joinURL(), "saveDir": s.cfg.SaveDir,
 		"devices": devs, "groups": s.groups.List(), "known": known,
-		"items": s.views(s.items.All()),
+		"items": s.views(s.items.All()), "apk": s.apkState(),
 	}
 }
 

@@ -43,6 +43,8 @@ type Config struct {
 	Web fs.FS
 	// OpenPath opens a folder in the OS file manager. Nil disables it.
 	OpenPath func(path string) error
+	// APKPath is this app's own installed APK, shared on request (Android only).
+	APKPath string
 	// Doctor runs network checks. Nil disables the doctor endpoints.
 	Doctor DoctorRunner
 	// Quit stops the app (used when there is no terminal to press Ctrl+C in). Nil disables it.
@@ -69,8 +71,10 @@ type Server struct {
 	outbox     *transfer.Uploads // host drag-and-drop staging
 	joinURL    func() string
 	ip         atomic.Value // string: the address put in the QR code and join link
-	uploadMeta sync.Map     // upload id → uploadMeta
-	phoneSeen  atomic.Bool  // a non-loopback device joined this run
+	apkUntil   atomic.Int64 // unix nanoseconds until which /app.apk is served; 0 = off
+	now        func() time.Time
+	uploadMeta sync.Map    // upload id → uploadMeta
+	phoneSeen  atomic.Bool // a non-loopback device joined this run
 }
 
 // New builds a Server from cfg.
@@ -103,8 +107,10 @@ func New(cfg Config) (*Server, error) {
 		outbox:    transfer.NewUploads(outboxDir),
 	}
 	s.ip.Store("")
+	s.now = time.Now
 	s.joinURL = s.defaultJoinURL
 	s.routes()
+	s.apkRoutes()
 	return s, nil
 }
 

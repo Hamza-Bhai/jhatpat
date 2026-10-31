@@ -43,6 +43,7 @@ func main() {
 	configDir := flag.String("config-dir", "", "folder for JhatPat's own state (default: the user config folder)")
 	jsonStartup := flag.Bool("json-startup", false, "print one JSON line with the port, tokens and PIN instead of the banner")
 	exitOnStdinClose := flag.Bool("exit-on-stdin-close", false, "exit when standard input is closed (for a parent process)")
+	apkPath := flag.String("apk", "", "path of this app's own APK, for the host to share (Android)")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 	if *showVersion {
@@ -72,6 +73,7 @@ func main() {
 		Port:      actualPort,
 		SaveDir:   *dir,
 		ConfigDir: cfgDir,
+		APKPath:   *apkPath,
 		Web:       web.FS,
 		OpenPath:  openPath,
 		Doctor:    doctor,
