@@ -25,3 +25,51 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  android-apk:
+    # Builds the signed Android app and attaches it to the release the job above created.
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - name: Signing key missing
+        if: env.HAS_KEY != 'true'
+        run: echo "::warning::ANDROID_KEYSTORE_BASE64 is not set, so no APK was built. See JhatPat-app/docs/signing.md."
+      - uses: actions/checkout@v7
+        if: env.HAS_KEY == 'true'
+      - uses: actions/setup-java@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-go@v7
+        if: env.HAS_KEY == 'true'
+        with:
+          go-version-file: web/go.mod
+          cache-dependency-path: web/go.sum
+      - uses: gradle/actions/setup-gradle@v4
+        if: env.HAS_KEY == 'true'
+      - name: Build and sign the APK
+        if: env.HAS_KEY == 'true'
+        working-directory: JhatPat-app
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/jhatpat-release.jks"
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/jhatpat-release.jks"
+          ./gradlew assembleRelease -PversionName="${GITHUB_REF_NAME#v}" --console=plain
+      - name: Check the signature and attach the APK
+        if: env.HAS_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs JhatPat-app/app/build/outputs/apk/release/app-release.apk
+          cp JhatPat-app/app/build/outputs/apk/release/app-release.apk "JhatPat-$VERSION.apk"
+          sha256sum "JhatPat-$VERSION.apk" > "JhatPat-$VERSION.apk.sha256"
+          gh release upload "$GITHUB_REF_NAME" "JhatPat-$VERSION.apk" "JhatPat-$VERSION.apk.sha256" --clobber

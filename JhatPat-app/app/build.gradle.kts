@@ -1,8 +1,27 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// The version comes from the release tag (-PversionName=0.2.0). Android needs a version code that
+// grows with every release, so it is derived: 0.2.1 becomes 201.
+val appVersionName = providers.gradleProperty("versionName").getOrElse("0.2.0-dev")
+val appVersionCode = appVersionName.substringBefore('-').split('.').mapNotNull { it.toIntOrNull() }
+    .let { if (it.size == 3) it[0] * 10_000 + it[1] * 100 + it[2] else 1 }
+
+// Release signing: from environment variables (CI) or local.properties (a developer's machine).
+// Without a keystore the release build is simply left unsigned, so pull requests still build.
+val localProps = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
+fun signingValue(env: String, property: String): String? =
+    System.getenv(env)?.takeIf { it.isNotBlank() } ?: localProps.getProperty(property)
+
+val keystorePath = signingValue("ANDROID_KEYSTORE_PATH", "release.storeFile")
 
 android {
     namespace = "io.github.hamzabhai.jhatpat"
@@ -13,11 +32,31 @@ android {
         minSdk = 26
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 1
-        versionName = providers.gradleProperty("versionName").getOrElse("0.2.0-dev")
+        versionCode = appVersionCode
+        versionName = appVersionName
         // English only: drop the translations AndroidX libraries ship with.
         @Suppress("UnstableApiUsage")
         resourceConfigurations += "en"
+    }
+
+    signingConfigs {
+        if (keystorePath != null) {
+            create("release") {
+                storeFile = rootProject.file(keystorePath)
+                storePassword = signingValue("ANDROID_KEYSTORE_PASSWORD", "release.storePassword")
+                keyAlias = signingValue("ANDROID_KEY_ALIAS", "release.keyAlias")
+                keyPassword = signingValue("ANDROID_KEY_PASSWORD", "release.keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // No R8: almost all of the APK is the three server binaries, so shrinking the Kotlin
+            // code would save little and risk the WebView bridge.
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+        }
     }
 
     buildFeatures {

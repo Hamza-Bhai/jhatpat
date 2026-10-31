@@ -47,6 +47,26 @@ jhatpat -version            # print the version
 
 On Windows the released `jhatpat.exe` has no console, so it prints nothing; run a source build (below) if you want terminal output.
 
+## Android app: use a phone as the host
+
+No laptop around? Install the JhatPat app on an Android phone and it becomes the host, exactly like the laptop program. Others join from their browser, so they install nothing.
+
+1. Download `JhatPat-<version>.apk` from the [Releases](../../releases) page and open it. Android asks you to allow **Install unknown apps** for your browser or file manager; allow it just for this install.
+2. Open JhatPat and tap **Start sharing**.
+   - **Use my current WiFi** if everyone is on the same network.
+   - **Create a hotspot** if there is no WiFi. JhatPat makes a hotspot with no internet. Android needs the **Location** permission (and Location switched on) for this, once.
+3. Show the QR code. With a hotspot there are two quick steps: first the QR that joins the WiFi, then (after you tap *They're connected*) the QR that opens JhatPat.
+4. Tap **Allow** in the chat when someone asks to join, then send files, folders and text to one person, a group or **Everyone**.
+
+More things the app does:
+
+- **Share from other apps:** in Gallery, Files or WhatsApp, choose *Share → JhatPat* to send to the people connected.
+- **Files you receive** are saved to the Gallery (photos and videos) or Downloads, in a `JhatPat` folder.
+- **Share this app:** a nearby person can install JhatPat from your phone (no internet needed) with the *Share this app* button.
+- It keeps working with the screen off; a notification shows how many people are connected, with a **Stop** button.
+
+The app needs Android 8 or newer. Like the laptop version, traffic uses plain HTTP on the local network, so use it on networks you trust. See [JhatPat-app](JhatPat-app) to build it yourself.
+
 ## Troubleshooting
 
 Click the status pill at the top of the laptop page to open the **Network Doctor**.
