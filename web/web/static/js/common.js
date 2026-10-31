@@ -215,7 +215,9 @@
     const pk = JP.previewKind(it.name, it.kind);
     const size = it.size ? JP.fmtBytes(it.size) : "";
     let body;
-    if (it.moved) {
+    // In the Android app a moved photo, video or song is still previewed (the app answers for it from the Gallery).
+    const previewable = window.JhatPatApp && ["image", "video", "audio"].includes(pk);
+    if (it.moved && !previewable) {
       const name = it.name + (it.kind === "folder" ? ".zip" : "");
       const open = window.JhatPatApp ? `<button class="btn small primary" data-open-moved="${it.id}">${t("open")}</button>` : "";
       body = `<div class="file"><span class="ico">${JP.fileIcon(it.name, it.kind)}</span>
@@ -239,7 +241,9 @@
         <span class="ico">${JP.fileIcon(it.name, it.kind)}</span>
         <div><b>${JP.esc(name)}</b><span style="opacity:.8">${size}</span></div></div>`;
       body = media ? `${media}<div class="cap">${JP.esc(name)} <span style="opacity:.8">${size}</span></div>` : row;
-      body += `<div class="acts"><a class="btn small primary" href="${dl}" download>${t("download")}</a></div>`;
+      body += it.moved
+        ? `<div class="acts"><button class="btn small primary" data-open-moved="${it.id}">${t("open")}</button></div>`
+        : `<div class="acts"><a class="btn small primary" href="${dl}" download>${t("download")}</a></div>`;
     }
     const x = opts.removable ? `<button class="x" title="${t("remove")}" data-remove="${it.id}">✕</button>` : "";
     return `<div class="msg ${opts.mine ? "mine" : ""} ${pk === "image" || pk === "video" ? "media" : ""}" data-id="${it.id}">${who}${body}

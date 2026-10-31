@@ -7,6 +7,7 @@ import android.net.Uri
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -22,6 +23,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import io.github.hamzabhai.jhatpat.media.ContentResolverMedia
+import io.github.hamzabhai.jhatpat.media.HostItemUrl
+import io.github.hamzabhai.jhatpat.media.MovedMediaResponder
+import io.github.hamzabhai.jhatpat.service.SharingController
 import io.github.hamzabhai.jhatpat.service.SharingState
 
 /**
@@ -42,6 +47,8 @@ fun ChatScreen(state: SharingState.Running, onBack: () -> Unit, openReceived: (S
     if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
         WebView.setWebContentsDebuggingEnabled(true)
     }
+    // Files moved to the Gallery are no longer on the server, so previews of them are answered from the Gallery.
+    val movedMedia = remember { MovedMediaResponder(ContentResolverMedia(context.contentResolver, SharingController.savedUris)) }
     val url = "http://127.0.0.1:${state.info.port}/host?t=${state.info.hostToken}"
     var webView by remember { mutableStateOf<WebView?>(null) }
     DisposableEffect(Unit) { onDispose { webView?.destroy() } }
@@ -54,6 +61,13 @@ fun ChatScreen(state: SharingState.Running, onBack: () -> Unit, openReceived: (S
                 settings.domStorageEnabled = true
                 addJavascriptInterface(HostBridge(openReceived), "JhatPatApp")
                 webViewClient = object : WebViewClient() {
+                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                        if (request.method != "GET" || request.url.host != "127.0.0.1") return null
+                        val item = HostItemUrl.parse(request.url.path.orEmpty()) ?: return null
+                        val reply = movedMedia.respond(item.id, request.requestHeaders["Range"]) ?: return null
+                        return WebResourceResponse(reply.mime, null, reply.status, reply.reason, reply.headers, reply.body)
+                    }
+
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                         if (request.url.host == "127.0.0.1") return false
                         // links people send in the chat open in their browser, not inside the app
