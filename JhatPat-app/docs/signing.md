@@ -28,6 +28,17 @@ Android only installs an APK that is signed, and it only accepts an update signe
    | `ANDROID_KEY_ALIAS` | `jhatpat` (or the alias you chose) |
    | `ANDROID_KEY_PASSWORD` | the key password |
 
+   **How to paste each value.** Keep one text file per secret in a folder *outside* the repository (named like the secret, for example `ANDROID_KEYSTORE_BASE64.txt`). For each secret open `https://github.com/<owner>/<repo>/settings/secrets/actions/new`, type the secret's name, copy its value (below), click into the **Secret** box, press **Ctrl+V**, then **Add secret**. The clipboard holds one value at a time, so do the four secrets one after another.
+
+   | Where you type the command | Copy a file's text to the clipboard |
+   |---|---|
+   | Command Prompt (`cmd`) | `clip < C:\path	o\ANDROID_KEYSTORE_BASE64.txt` |
+   | PowerShell | `Get-Content -Raw C:\path	o\ANDROID_KEYSTORE_BASE64.txt \| Set-Clipboard` |
+   | macOS | `pbcopy < /path/to/ANDROID_KEYSTORE_BASE64.txt` |
+   | Linux (X11) | `xclip -selection clipboard < /path/to/ANDROID_KEYSTORE_BASE64.txt` |
+
+   The PowerShell command only works in a PowerShell window, and the `clip <` form only in `cmd`; using one in the other gives "not recognized". `clip` prints nothing when it works. When all four are added, *Settings → Secrets and variables → Actions* lists four names (GitHub never shows the values again).
+
 4. **Store the keystore somewhere safe** (a password manager or an encrypted backup), then delete the local copy you do not need.
 
 ## Releasing
