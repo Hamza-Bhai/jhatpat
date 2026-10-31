@@ -135,7 +135,12 @@
         if (it && it.from !== me.id && navigator.vibrate) navigator.vibrate(80);
       },
       "item-removed": () => load(),
-      kicked: () => { es.close(); kicked(); },
+      kicked: (d) => {
+        es.close();
+        // Blocked: the join page says so and lets us back in by itself if the host unblocks.
+        if (d && d.blocked) return location.replace("/");
+        kicked();
+      },
     });
     // If JhatPat restarted (or we were removed), go back to the join screen.
     setInterval(() => loadTargets().catch((e) => { if (e.status === 401) location.replace("/"); }), 15000);

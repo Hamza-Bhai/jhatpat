@@ -60,7 +60,7 @@
     try {
       const s = await JP.api("/api/join/status");
       if (s.state === "approved") return location.replace("/");
-      if (s.state === "blocked") { clearInterval(polling); return show("blockedView"); }
+      if (s.state === "blocked") return show("blockedView"); // keep polling: the host may unblock
       if (s.state === "pending") show("waitView");
     } catch (_) {}
   }
@@ -110,7 +110,7 @@
   // Came from the QR link? Then we are already pending.
   JP.api("/api/join/status").then((s) => {
     if (s.state === "pending" || s.state === "approved") startPolling();
-    else if (s.state === "blocked") show("blockedView");
+    else if (s.state === "blocked") { show("blockedView"); startPolling(); }
     else boxes[0].focus();
   }).catch(() => {});
 })();
