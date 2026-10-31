@@ -9,12 +9,8 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X main.version={{.Version}}
-    overrides:
-      # No terminal window when a Windows user double-clicks the exe.
-      - goos: windows
-        ldflags:
-          - -s -w -X main.version={{.Version}} -H=windowsgui
+      # Windows gets -H=windowsgui so double-clicking the exe opens no terminal window.
+      - -s -w -X main.version={{.Version}}{{ if eq .Os "windows" }} -H=windowsgui{{ end }}
     goos: [windows, darwin, linux]
     goarch: [amd64, arm64]
 

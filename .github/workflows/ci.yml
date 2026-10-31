@@ -41,3 +41,29 @@ jobs:
           for target in windows/amd64 windows/arm64 darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
             GOOS=${target%/*} GOARCH=${target#*/} CGO_ENABLED=0 go build -o /dev/null ./cmd/jhatpat
           done
+
+  release-config:
+    # Dry-run of the release build: validates .goreleaser.yaml and checks that
+    # the Windows exe is a GUI app (no terminal window on double-click).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: build --snapshot --clean
+      - name: Windows exe must not be a console app
+        run: |
+          python3 - <<'PY'
+          import glob, struct
+          exes = glob.glob("dist/*windows_amd64*/jhatpat.exe")
+          assert exes, "no windows build found"
+          d = open(exes[0], "rb").read(4096)
+          pe = struct.unpack_from("<I", d, 0x3c)[0]
+          sub = struct.unpack_from("<H", d, pe + 24 + 68)[0]
+          assert sub == 2, f"windows exe subsystem is {sub}, expected 2 (GUI)"
+          print("windows exe subsystem OK (GUI)")
+          PY
