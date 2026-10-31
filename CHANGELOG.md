@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-31
+
+### Fixed
+- The Windows release build is now a GUI app, so double-clicking `jhatpat.exe` no longer opens a terminal window (v0.1.0 shipped a console build by mistake).
+
 ## [0.1.0] - 2026-10-31
 
 First public release: PIN and QR joining with per-run approval, groups, resumable uploads, folder transfer, and the Network Doctor.
